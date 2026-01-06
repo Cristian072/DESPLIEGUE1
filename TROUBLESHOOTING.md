@@ -137,3 +137,4 @@ Antes de hacer deploy, verifica:
 4. Verifica que no haya errores de sintaxis en Python
 5. Contacta el soporte de Railway con los logs de error
 
+

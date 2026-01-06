@@ -555,16 +555,25 @@ def query_flights():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@app.route('/api/retrain', methods=['POST'])
-def retrain_model():
-    """Retrenar modelo con nueva data"""
+@app.route('/api/train', methods=['POST'])
+def train_model():
+    """Entrenar modelo inicial o retrenar modelo existente"""
     try:
         # Verificar que el dataset existe
         if not os.path.exists(DATA_PATH):
             return jsonify({
                 'success': False,
-                'error': 'Dataset no encontrado. Por favor, suba el archivo CSV primero.'
+                'error': 'Dataset no encontrado. Por favor, suba el archivo CSV primero desde la sección "Subir Nueva Data".',
+                'requires_dataset': True
             }), 400
+        
+        # Verificar si el modelo ya existe
+        model_exists = os.path.exists(MODEL_PATH)
+        action = 'retrenar' if model_exists else 'entrenar'
+        
+        print(f"Iniciando {action} del modelo...")
+        print(f"Dataset: {DATA_PATH} (existe: {os.path.exists(DATA_PATH)})")
+        print(f"Modelo existente: {MODEL_PATH} (existe: {model_exists})")
         
         # Ejecutar script de entrenamiento con límite de memoria
         import subprocess
@@ -576,21 +585,47 @@ def retrain_model():
             env={**os.environ, 'TRAINING_MAX_ROWS': '15000'}
         )
         
-        if result.returncode == 0:
+        # Verificar que el modelo se creó correctamente
+        model_created = os.path.exists(MODEL_PATH) and os.path.exists(SCALER_PATH)
+        
+        if result.returncode == 0 and model_created:
             return jsonify({
                 'success': True,
-                'message': 'Modelo retrenado exitosamente',
-                'output': result.stdout
+                'message': f'Modelo {action}do exitosamente',
+                'output': result.stdout,
+                'action': action,
+                'model_created': True
             })
         else:
+            error_msg = result.stderr if result.stderr else result.stdout
             return jsonify({
                 'success': False,
-                'error': 'Error en el entrenamiento del modelo',
-                'output': result.stderr
+                'error': f'Error en el {action} del modelo',
+                'output': error_msg,
+                'exit_code': result.returncode,
+                'model_created': model_created
             }), 500
     
+    except subprocess.TimeoutExpired:
+        return jsonify({
+            'success': False,
+            'error': 'El entrenamiento excedió el tiempo límite (10 minutos). Intente con un dataset más pequeño.'
+        }), 500
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        import traceback
+        error_trace = traceback.format_exc()
+        print(f"Error en train_model: {str(e)}")
+        print(error_trace)
+        return jsonify({
+            'success': False,
+            'error': f'Error inesperado: {str(e)}',
+            'traceback': error_trace if app.debug else None
+        }), 500
+
+@app.route('/api/retrain', methods=['POST'])
+def retrain_model():
+    """Alias para /api/train - mantener compatibilidad"""
+    return train_model()
 
 @app.route('/api/upload-data', methods=['POST'])
 def upload_data():

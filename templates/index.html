@@ -656,16 +656,45 @@
         
         <!-- Tab Mantenimiento -->
         <div id="mantenimiento" class="tab-content">
-            <h2 class="section-title"><i class="fas fa-cogs"></i> Mantenimiento y CI/CD</h2>
-            <div class="info-box">
-                <p><strong><i class="fas fa-info-circle"></i> Información del Pipeline:</strong></p>
-                <p>Este sistema soporta retrenamiento automático del modelo cuando hay nueva data disponible.</p>
-                <p>Suba un archivo CSV con nueva data para combinarla automáticamente con el dataset existente y retrenar el modelo.</p>
-                <p>El pipeline CI/CD está configurado mediante GitHub Actions para despliegues automatizados.</p>
+            <h2 class="section-title"><i class="fas fa-cogs"></i> Mantenimiento y Entrenamiento</h2>
+            
+            <!-- Estado del Modelo -->
+            <div id="estadoModelo" class="info-box" style="margin-bottom: 30px;">
+                <p><strong><i class="fas fa-info-circle"></i> Estado del Modelo:</strong></p>
+                <p id="estadoModeloTexto">Verificando estado del modelo...</p>
             </div>
             
+            <div class="info-box">
+                <p><strong><i class="fas fa-info-circle"></i> Flujo de Trabajo:</strong></p>
+                <ol style="margin-left: 20px; margin-top: 10px;">
+                    <li><strong>Paso 1:</strong> Entrene el modelo inicial con su dataset CSV</li>
+                    <li><strong>Paso 2:</strong> Suba más data cuando tenga nueva información</li>
+                    <li><strong>Paso 3:</strong> Reentrene el modelo con toda la data combinada</li>
+                </ol>
+            </div>
+            
+            <!-- Entrenamiento Inicial -->
             <div style="margin-top: 30px;">
+                <h3 style="margin-bottom: 20px; color: var(--azul-oscuro);">
+                    <i class="fas fa-play-circle"></i> Entrenar Modelo Inicial
+                </h3>
+                <p style="margin-bottom: 15px; color: var(--gris-oscuro);">
+                    Use este botón para entrenar el modelo por primera vez con su dataset CSV. 
+                    Asegúrese de haber subido el archivo CSV primero.
+                </p>
+                <button class="btn-primary" onclick="entrenarModelo()" id="btnEntrenar">
+                    <i class="fas fa-play-circle"></i> Entrenar Modelo
+                </button>
+                <div id="resultadoEntrenamiento" class="result-box" style="margin-top: 20px;"></div>
+            </div>
+            
+            <!-- Subir Nueva Data -->
+            <div style="margin-top: 40px;">
                 <h3 style="margin-bottom: 20px; color: var(--azul-oscuro);"><i class="fas fa-upload"></i> Subir Nueva Data</h3>
+                <p style="margin-bottom: 15px; color: var(--gris-oscuro);">
+                    Suba un archivo CSV con nueva data. El sistema la combinará automáticamente 
+                    con el dataset existente y reentrenará el modelo.
+                </p>
                 <div class="upload-area" id="areaUpload" onclick="document.getElementById('inputArchivo').click()">
                     <i class="fas fa-cloud-upload-alt"></i>
                     <p style="font-size: 1.3em; font-weight: 600; color: var(--azul-oscuro); margin-top: 15px;">Haga clic para subir o arrastre y suelte</p>
@@ -675,14 +704,22 @@
                 <div id="resultadoUpload" class="result-box" style="margin-top: 20px;"></div>
             </div>
             
+            <!-- Retrenamiento Manual -->
             <div style="margin-top: 40px;">
-                <h3 style="margin-bottom: 20px; color: var(--azul-oscuro);"><i class="fas fa-sync-alt"></i> Retrenamiento Manual</h3>
+                <h3 style="margin-bottom: 20px; color: var(--azul-oscuro);">
+                    <i class="fas fa-sync-alt"></i> Reentrenar Modelo Manualmente
+                </h3>
+                <p style="margin-bottom: 15px; color: var(--gris-oscuro);">
+                    Use este botón para reentrenar el modelo con el dataset actual. 
+                    Útil después de subir nueva data o si necesita actualizar el modelo.
+                </p>
                 <button class="btn-primary" onclick="retrenarModelo()">
-                    <i class="fas fa-sync-alt"></i> Retrenar Modelo
+                    <i class="fas fa-sync-alt"></i> Reentrenar Modelo
                 </button>
                 <div id="resultadoRetrenamiento" class="result-box" style="margin-top: 20px;"></div>
             </div>
             
+            <!-- Verificación del Sistema -->
             <div style="margin-top: 40px;">
                 <h3 style="margin-bottom: 20px; color: var(--azul-oscuro);"><i class="fas fa-heartbeat"></i> Verificación del Sistema</h3>
                 <button class="btn-primary" onclick="verificarSalud()">
@@ -830,6 +867,8 @@
                 cargarClusters();
             } else if (nombreTab === 'estadisticas') {
                 cargarEstadisticas();
+            } else if (nombreTab === 'mantenimiento') {
+                actualizarEstadoModelo(); // Actualizar estado cuando se abre la pestaña
             }
         }
         
@@ -1409,15 +1448,67 @@
             }
         });
         
-        // Retrenar modelo
-        async function retrenarModelo() {
-            const resultadoDiv = document.getElementById('resultadoRetrenamiento');
+        // Actualizar estado del modelo
+        async function actualizarEstadoModelo() {
+            const estadoDiv = document.getElementById('estadoModeloTexto');
+            try {
+                const response = await fetch('/health');
+                const data = await response.json();
+                
+                if (data.model_loaded && data.scaler_loaded) {
+                    estadoDiv.innerHTML = `
+                        <span style="color: var(--exito); font-weight: 600;">
+                            <i class="fas fa-check-circle"></i> Modelo entrenado y listo
+                        </span>
+                        <br>
+                        <span style="font-size: 0.9em; color: var(--gris-oscuro);">
+                            Clusters: ${data.n_clusters || 'N/A'} | Dataset: ${data.data_available ? 'Disponible' : 'No disponible'}
+                        </span>
+                    `;
+                } else if (data.data_available) {
+                    estadoDiv.innerHTML = `
+                        <span style="color: var(--advertencia); font-weight: 600;">
+                            <i class="fas fa-exclamation-triangle"></i> Dataset disponible pero modelo no entrenado
+                        </span>
+                        <br>
+                        <span style="font-size: 0.9em; color: var(--gris-oscuro);">
+                            Haga clic en "Entrenar Modelo" para comenzar
+                        </span>
+                    `;
+                } else {
+                    estadoDiv.innerHTML = `
+                        <span style="color: var(--error); font-weight: 600;">
+                            <i class="fas fa-times-circle"></i> Dataset no disponible
+                        </span>
+                        <br>
+                        <span style="font-size: 0.9em; color: var(--gris-oscuro);">
+                            Suba un archivo CSV para comenzar
+                        </span>
+                    `;
+                }
+            } catch (error) {
+                estadoDiv.innerHTML = `
+                    <span style="color: var(--error);">
+                        <i class="fas fa-exclamation-circle"></i> Error al verificar estado: ${error.message}
+                    </span>
+                `;
+            }
+        }
+        
+        // Entrenar modelo inicial
+        async function entrenarModelo() {
+            const resultadoDiv = document.getElementById('resultadoEntrenamiento');
             resultadoDiv.style.display = 'block';
             resultadoDiv.className = 'result-box';
-            resultadoDiv.innerHTML = '<div class="loading">Retrenando modelo. Esto puede tomar unos minutos</div>';
+            resultadoDiv.innerHTML = '<div class="loading">Entrenando modelo inicial. Esto puede tomar varios minutos...</div>';
+            
+            // Deshabilitar botón durante el entrenamiento
+            const btnEntrenar = document.getElementById('btnEntrenar');
+            btnEntrenar.disabled = true;
+            btnEntrenar.style.opacity = '0.6';
             
             try {
-                const response = await fetch('/api/retrain', {
+                const response = await fetch('/api/train', {
                     method: 'POST'
                 });
                 
@@ -1426,19 +1517,80 @@
                 if (data.success) {
                     resultadoDiv.className = 'result-box success';
                     resultadoDiv.innerHTML = `
-                        <h3><i class="fas fa-check-circle"></i> Modelo Retrenado Exitosamente</h3>
-                        <pre style="background: rgba(0,0,0,0.05); padding: 15px; border-radius: 8px; margin-top: 10px; overflow-x: auto; font-size: 0.9em;">${data.output}</pre>
+                        <h3><i class="fas fa-check-circle"></i> Modelo Entrenado Exitosamente</h3>
+                        <p><strong>${data.message}</strong></p>
+                        <p style="margin-top: 10px;">El modelo está listo para hacer predicciones.</p>
+                        <pre style="background: rgba(0,0,0,0.05); padding: 15px; border-radius: 8px; margin-top: 10px; overflow-x: auto; font-size: 0.9em; max-height: 300px; overflow-y: auto;">${data.output || 'Sin salida disponible'}</pre>
                     `;
+                    // Actualizar estado del modelo
+                    setTimeout(actualizarEstadoModelo, 1000);
                 } else {
                     resultadoDiv.className = 'result-box error';
+                    let errorMsg = data.error || 'Error desconocido';
+                    if (data.requires_dataset) {
+                        errorMsg += '<br><br><strong>Sugerencia:</strong> Suba un archivo CSV desde la sección "Subir Nueva Data" primero.';
+                    }
                     resultadoDiv.innerHTML = `
-                        <h3><i class="fas fa-exclamation-circle"></i> Error en el Retrenamiento</h3>
-                        <pre style="background: rgba(0,0,0,0.05); padding: 15px; border-radius: 8px; margin-top: 10px; overflow-x: auto; font-size: 0.9em;">${data.output || data.error}</pre>
+                        <h3><i class="fas fa-exclamation-circle"></i> Error en el Entrenamiento</h3>
+                        <p>${errorMsg}</p>
+                        ${data.output ? `<pre style="background: rgba(255,0,0,0.1); padding: 15px; border-radius: 8px; margin-top: 10px; overflow-x: auto; font-size: 0.9em; max-height: 300px; overflow-y: auto;">${data.output}</pre>` : ''}
                     `;
                 }
             } catch (error) {
                 resultadoDiv.className = 'result-box error';
-                resultadoDiv.innerHTML = `<h3><i class="fas fa-exclamation-circle"></i> Error</h3><p>${error.message}</p>`;
+                resultadoDiv.innerHTML = `
+                    <h3><i class="fas fa-exclamation-circle"></i> Error de Conexión</h3>
+                    <p><strong>Error:</strong> ${error.message}</p>
+                    <p style="margin-top: 10px;">Por favor verifique su conexión e intente nuevamente.</p>
+                `;
+            } finally {
+                // Rehabilitar botón
+                btnEntrenar.disabled = false;
+                btnEntrenar.style.opacity = '1';
+            }
+        }
+        
+        // Retrenar modelo
+        async function retrenarModelo() {
+            const resultadoDiv = document.getElementById('resultadoRetrenamiento');
+            resultadoDiv.style.display = 'block';
+            resultadoDiv.className = 'result-box';
+            resultadoDiv.innerHTML = '<div class="loading">Reentrenando modelo. Esto puede tomar unos minutos...</div>';
+            
+            try {
+                const response = await fetch('/api/train', {
+                    method: 'POST'
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    resultadoDiv.className = 'result-box success';
+                    resultadoDiv.innerHTML = `
+                        <h3><i class="fas fa-check-circle"></i> Modelo Reentrenado Exitosamente</h3>
+                        <p><strong>${data.message}</strong></p>
+                        <pre style="background: rgba(0,0,0,0.05); padding: 15px; border-radius: 8px; margin-top: 10px; overflow-x: auto; font-size: 0.9em; max-height: 300px; overflow-y: auto;">${data.output || 'Sin salida disponible'}</pre>
+                    `;
+                    // Actualizar estado del modelo
+                    setTimeout(actualizarEstadoModelo, 1000);
+                } else {
+                    resultadoDiv.className = 'result-box error';
+                    let errorMsg = data.error || 'Error desconocido';
+                    if (data.requires_dataset) {
+                        errorMsg += '<br><br><strong>Sugerencia:</strong> Asegúrese de que el dataset esté disponible.';
+                    }
+                    resultadoDiv.innerHTML = `
+                        <h3><i class="fas fa-exclamation-circle"></i> Error en el Reentrenamiento</h3>
+                        <p>${errorMsg}</p>
+                        ${data.output ? `<pre style="background: rgba(255,0,0,0.1); padding: 15px; border-radius: 8px; margin-top: 10px; overflow-x: auto; font-size: 0.9em; max-height: 300px; overflow-y: auto;">${data.output}</pre>` : ''}
+                    `;
+                }
+            } catch (error) {
+                resultadoDiv.className = 'result-box error';
+                resultadoDiv.innerHTML = `
+                    <h3><i class="fas fa-exclamation-circle"></i> Error</h3>
+                    <p><strong>Error:</strong> ${error.message}</p>
+                `;
             }
         }
         
@@ -1470,17 +1622,19 @@
                         <hr style="margin: 15px 0; border: none; border-top: 1px solid rgba(0,0,0,0.1);">
                         <p style="margin-top: 15px;"><strong>Acciones Recomendadas:</strong></p>
                         <ul style="margin-left: 20px; margin-top: 10px;">
-                            ${!data.model_loaded ? '<li>Entrenar el modelo desde la pestaña Mantenimiento</li>' : ''}
-                            ${!data.data_available ? '<li>Verificar que el archivo CSV esté en el directorio correcto</li>' : ''}
+                            ${!data.model_loaded ? '<li>Entrenar el modelo desde la sección "Entrenar Modelo Inicial"</li>' : ''}
+                            ${!data.data_available ? '<li>Subir un archivo CSV desde la sección "Subir Nueva Data"</li>' : ''}
                             ${data.data_available && !data.data_readable ? '<li>Verificar el formato del archivo CSV</li>' : ''}
                         </ul>
                         ${!data.model_loaded ? `
-                            <button class="btn-primary" onclick="retrenarModelo()" style="margin-top: 15px;">
-                                <i class="fas fa-sync-alt"></i> Entrenar Modelo Ahora
+                            <button class="btn-primary" onclick="entrenarModelo()" style="margin-top: 15px;">
+                                <i class="fas fa-play-circle"></i> Entrenar Modelo Ahora
                             </button>
                         ` : ''}
                     ` : ''}
                 `;
+                // Actualizar también el estado del modelo en la parte superior
+                actualizarEstadoModelo();
             } catch (error) {
                 resultadoDiv.className = 'result-box error';
                 resultadoDiv.innerHTML = `<h3><i class="fas fa-exclamation-circle"></i> Error</h3><p>${error.message}</p>`;
@@ -1490,10 +1644,32 @@
         // Inicializar al cargar la página
         window.addEventListener('DOMContentLoaded', () => {
             cargarAeropuertos();
+            actualizarEstadoModelo(); // Actualizar estado del modelo
             if (document.getElementById('clusters').classList.contains('active')) {
                 cargarClusters();
             }
         });
+        
+        // Actualizar estado del modelo cuando se cambia a la pestaña de mantenimiento
+        function mostrarTab(nombreTab) {
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelectorAll('.nav-tab').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            document.getElementById(nombreTab).classList.add('active');
+            event.target.classList.add('active');
+            
+            if (nombreTab === 'clusters') {
+                cargarClusters();
+            } else if (nombreTab === 'estadisticas') {
+                cargarEstadisticas();
+            } else if (nombreTab === 'mantenimiento') {
+                actualizarEstadoModelo(); // Actualizar estado cuando se abre la pestaña
+            }
+        }
     </script>
 </body>
 </html>
