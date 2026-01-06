@@ -182,8 +182,23 @@ def predict():
 @app.route('/api/clusters', methods=['GET'])
 def get_clusters():
     """Obtener información sobre los clusters"""
+    print("=" * 50)
+    print("GET /api/clusters - Iniciando...")
+    print(f"Current directory: {os.getcwd()}")
+    print(f"DATA_PATH: {DATA_PATH}")
+    print(f"DATA_PATH exists: {os.path.exists(DATA_PATH)}")
+    print(f"MODEL_PATH exists: {os.path.exists(MODEL_PATH)}")
+    print(f"SCALER_PATH exists: {os.path.exists(SCALER_PATH)}")
+    print("=" * 50)
+    
     try:
         model, scaler, feature_names, origin_encoder, dest_encoder = load_model()
+        
+        print(f"Model loaded: {model is not None}")
+        print(f"Scaler loaded: {scaler is not None}")
+        print(f"Feature names loaded: {feature_names is not None}")
+        print(f"Origin encoder loaded: {origin_encoder is not None}")
+        print(f"Dest encoder loaded: {dest_encoder is not None}")
         
         if model is None:
             return jsonify({
@@ -207,83 +222,181 @@ def get_clusters():
                 'scaler_exists': True
             }), 400
         
-        # Cargar datos para calcular tamaños de clusters
-        n_clusters = model.n_clusters if hasattr(model, 'n_clusters') else 0
-        cluster_sizes = np.zeros(n_clusters)
+        # Obtener número de clusters
+        try:
+            n_clusters = model.n_clusters if hasattr(model, 'n_clusters') else len(model.cluster_centers_)
+        except:
+            n_clusters = len(model.cluster_centers_) if model.cluster_centers_ is not None else 0
         
+        if n_clusters == 0:
+            return jsonify({
+                'error': 'No se pudo determinar el número de clusters del modelo.',
+                'model_exists': True,
+                'scaler_exists': True
+            }), 400
+        
+        # Inicializar tamaños de clusters
+        cluster_sizes = np.zeros(n_clusters, dtype=int)
+        
+        # Intentar cargar datos para calcular tamaños de clusters (opcional)
         if os.path.exists(DATA_PATH):
             try:
                 df = pd.read_csv(DATA_PATH, nrows=10000)
-                df['Fecha'] = pd.to_datetime(df['Fecha'], format='%d/%m/%Y', errors='coerce')
-                df['Dia_semana'] = df['Fecha'].dt.dayofweek
-                df['Hora_salida_num'] = df['Hora_salida'].apply(lambda x: int(str(x).zfill(4)[:2]) if pd.notna(x) else 0)
-                df['Duracion_vuelo'] = (
-                    df['Hora_llegada'].apply(lambda x: int(str(int(x)).zfill(4)[:2])*60 + int(str(int(x)).zfill(4)[2:]) if pd.notna(x) else 0) -
-                    df['Hora_salida'].apply(lambda x: int(str(int(x)).zfill(4)[:2])*60 + int(str(int(x)).zfill(4)[2:]) if pd.notna(x) else 0)
-                )
-                df['Duracion_vuelo'] = df['Duracion_vuelo'].apply(lambda x: x + 1440 if x < 0 else x)
                 
-                if origin_encoder is not None:
-                    df['Origen_encoded'] = origin_encoder.transform(df['Origen'].astype(str))
+                # Verificar que las columnas necesarias existan
+                required_cols = ['Fecha', 'Hora_salida', 'Hora_llegada', 'Origen', 'Destino', 
+                               'Retraso_Salida', 'Retraso_llegada', 'Retraso_Clima']
+                missing_cols = [col for col in required_cols if col not in df.columns]
+                
+                if missing_cols:
+                    print(f"Advertencia: Columnas faltantes en el dataset: {missing_cols}")
                 else:
-                    df['Origen_encoded'] = 0
-                
-                if dest_encoder is not None:
-                    df['Destino_encoded'] = dest_encoder.transform(df['Destino'].astype(str))
-                else:
-                    df['Destino_encoded'] = 0
-                
-                feature_cols = ['Retraso_Salida', 'Retraso_llegada', 'Retraso_Clima', 
-                              'Duracion_vuelo', 'Hora_salida_num', 'Dia_semana',
-                              'Origen_encoded', 'Destino_encoded']
-                
-                X = df[feature_cols].dropna()
-                if len(X) > 0:
-                    X_scaled = scaler.transform(X)
-                    labels = model.predict(X_scaled)
-                    cluster_sizes = np.bincount(labels, minlength=n_clusters)
+                    # Procesar datos
+                    df['Fecha'] = pd.to_datetime(df['Fecha'], format='%d/%m/%Y', errors='coerce')
+                    df['Dia_semana'] = df['Fecha'].dt.dayofweek
+                    df['Hora_salida_num'] = df['Hora_salida'].apply(
+                        lambda x: int(str(int(x)).zfill(4)[:2]) if pd.notna(x) else 0
+                    )
+                    
+                    # Calcular duración del vuelo
+                    def calc_duration(hora_salida, hora_llegada):
+                        try:
+                            h_sal = int(str(int(hora_salida)).zfill(4)[:2]) * 60 + int(str(int(hora_salida)).zfill(4)[2:]) if pd.notna(hora_salida) else 0
+                            h_lleg = int(str(int(hora_llegada)).zfill(4)[:2]) * 60 + int(str(int(hora_llegada)).zfill(4)[2:]) if pd.notna(hora_llegada) else 0
+                            duration = h_lleg - h_sal
+                            return duration + 1440 if duration < 0 else duration
+                        except:
+                            return 0
+                    
+                    df['Duracion_vuelo'] = df.apply(
+                        lambda row: calc_duration(row['Hora_salida'], row['Hora_llegada']), axis=1
+                    )
+                    
+                    # Codificar origen y destino
+                    try:
+                        if origin_encoder is not None:
+                            df['Origen_encoded'] = origin_encoder.transform(df['Origen'].astype(str))
+                        else:
+                            df['Origen_encoded'] = 0
+                    except Exception as enc_error:
+                        print(f"Error codificando origen: {str(enc_error)}")
+                        df['Origen_encoded'] = 0
+                    
+                    try:
+                        if dest_encoder is not None:
+                            df['Destino_encoded'] = dest_encoder.transform(df['Destino'].astype(str))
+                        else:
+                            df['Destino_encoded'] = 0
+                    except Exception as enc_error:
+                        print(f"Error codificando destino: {str(enc_error)}")
+                        df['Destino_encoded'] = 0
+                    
+                    # Preparar características
+                    feature_cols = ['Retraso_Salida', 'Retraso_llegada', 'Retraso_Clima', 
+                                  'Duracion_vuelo', 'Hora_salida_num', 'Dia_semana',
+                                  'Origen_encoded', 'Destino_encoded']
+                    
+                    # Verificar que todas las columnas existan
+                    available_cols = [col for col in feature_cols if col in df.columns]
+                    if len(available_cols) == len(feature_cols):
+                        X = df[feature_cols].dropna()
+                        if len(X) > 0:
+                            try:
+                                X_scaled = scaler.transform(X)
+                                labels = model.predict(X_scaled)
+                                cluster_sizes = np.bincount(labels, minlength=n_clusters)
+                            except Exception as pred_error:
+                                print(f"Error prediciendo clusters: {str(pred_error)}")
+                                import traceback
+                                print(traceback.format_exc())
             except Exception as e:
                 print(f"Error procesando datos para clusters: {str(e)}")
                 import traceback
                 print(traceback.format_exc())
-                # Usar tamaños por defecto si hay error
-                pass
+                # Continuar con tamaños por defecto (ceros)
         
+        # Construir información de clusters
         clusters_info = []
-        for i, center in enumerate(model.cluster_centers_):
-            # Calcular estadísticas del cluster
-            cluster_data = {
-                'cluster': int(i),
-                'center': center.tolist(),
-                'size': int(cluster_sizes[i]) if i < len(cluster_sizes) else 0
-            }
-            
-            # Agregar interpretación del cluster basada en centroides
-            if len(center) >= 3:
-                cluster_data['characteristics'] = {
-                    'avg_departure_delay': float(center[0]),
-                    'avg_arrival_delay': float(center[1]),
-                    'avg_weather_delay': float(center[2]),
-                    'cluster_type': 'High Delay' if center[0] > 20 or center[1] > 20 else 
-                                   'Weather Affected' if center[2] > 5 else 
-                                   'On Time' if center[0] < 5 and center[1] < 5 else 'Moderate Delay'
-                }
-            
-            clusters_info.append(cluster_data)
+        try:
+            for i in range(n_clusters):
+                if i < len(model.cluster_centers_):
+                    center = model.cluster_centers_[i]
+                    
+                    # Calcular estadísticas del cluster
+                    cluster_data = {
+                        'cluster': int(i),
+                        'center': center.tolist() if hasattr(center, 'tolist') else list(center),
+                        'size': int(cluster_sizes[i]) if i < len(cluster_sizes) else 0
+                    }
+                    
+                    # Agregar interpretación del cluster basada en centroides
+                    if len(center) >= 3:
+                        try:
+                            cluster_data['characteristics'] = {
+                                'avg_departure_delay': float(center[0]),
+                                'avg_arrival_delay': float(center[1]),
+                                'avg_weather_delay': float(center[2]),
+                                'cluster_type': 'High Delay' if center[0] > 20 or center[1] > 20 else 
+                                               'Weather Affected' if center[2] > 5 else 
+                                               'On Time' if center[0] < 5 and center[1] < 5 else 'Moderate Delay'
+                            }
+                        except Exception as char_error:
+                            print(f"Error calculando características del cluster {i}: {str(char_error)}")
+                            cluster_data['characteristics'] = {
+                                'avg_departure_delay': 0.0,
+                                'avg_arrival_delay': 0.0,
+                                'avg_weather_delay': 0.0,
+                                'cluster_type': 'Unknown'
+                            }
+                    else:
+                        cluster_data['characteristics'] = {
+                            'avg_departure_delay': 0.0,
+                            'avg_arrival_delay': 0.0,
+                            'avg_weather_delay': 0.0,
+                            'cluster_type': 'Unknown'
+                        }
+                    
+                    clusters_info.append(cluster_data)
+        except Exception as cluster_error:
+            print(f"Error construyendo información de clusters: {str(cluster_error)}")
+            import traceback
+            print(traceback.format_exc())
+            return jsonify({
+                'error': f'Error construyendo información de clusters: {str(cluster_error)}',
+                'n_clusters': n_clusters
+            }), 500
         
-        return jsonify({
+        # Preparar respuesta
+        response_data = {
             'n_clusters': n_clusters,
-            'clusters': clusters_info,
-            'feature_names': feature_names.tolist() if feature_names is not None else []
-        })
+            'clusters': clusters_info
+        }
+        
+        # Agregar feature_names si está disponible
+        try:
+            if feature_names is not None:
+                if hasattr(feature_names, 'tolist'):
+                    response_data['feature_names'] = feature_names.tolist()
+                elif isinstance(feature_names, (list, np.ndarray)):
+                    response_data['feature_names'] = list(feature_names)
+                else:
+                    response_data['feature_names'] = []
+            else:
+                response_data['feature_names'] = []
+        except Exception as fn_error:
+            print(f"Error procesando feature_names: {str(fn_error)}")
+            response_data['feature_names'] = []
+        
+        return jsonify(response_data), 200
     
     except Exception as e:
         import traceback
         error_trace = traceback.format_exc()
-        print(f"Error en /api/clusters: {str(e)}")
+        print(f"Error crítico en /api/clusters: {str(e)}")
         print(error_trace)
         return jsonify({
             'error': f'Error al obtener clusters: {str(e)}',
+            'error_type': type(e).__name__,
             'traceback': error_trace if app.debug else None
         }), 500
 
