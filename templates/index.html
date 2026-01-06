@@ -1367,7 +1367,22 @@
             
             try {
                 const response = await fetch('/api/stats');
+                
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({ error: 'Error desconocido' }));
+                    loadingDiv.innerHTML = `
+                        <div class="result-box error">
+                            <h3><i class="fas fa-exclamation-circle"></i> Error al Cargar Estadísticas</h3>
+                            <p><strong>Error HTTP ${response.status}:</strong> ${errorData.error || 'Error desconocido'}</p>
+                        </div>
+                    `;
+                    loadingDiv.style.display = 'block';
+                    contentDiv.style.display = 'none';
+                    return;
+                }
+                
                 const data = await response.json();
+                console.log('Datos recibidos de /api/stats:', data);
                 
                 if (!data.dataset_available || data.error) {
                     loadingDiv.innerHTML = `
@@ -1428,14 +1443,18 @@
                     const ctx = document.getElementById('graficoEstadisticas').getContext('2d');
                     if (graficoEstadisticas) graficoEstadisticas.destroy();
                     
-                    const topRutas = Object.entries(data.top_routes).slice(0, 10);
+                    // Procesar top routes de forma segura
+                    const topRutas = data.top_routes ? Object.entries(data.top_routes).slice(0, 10) : [];
+                    const rutasLabels = topRutas.length > 0 ? topRutas.map(([route]) => route) : ['No hay datos'];
+                    const rutasData = topRutas.length > 0 ? topRutas.map(([, count]) => count) : [0];
+                    
                     graficoEstadisticas = new Chart(ctx, {
                         type: 'bar',
                         data: {
-                            labels: topRutas.map(([route]) => route.replace(',', ' →')),
+                            labels: rutasLabels,
                             datasets: [{
                                 label: 'Número de Vuelos',
-                                data: topRutas.map(([, count]) => count),
+                                data: rutasData,
                                 backgroundColor: 'rgba(0, 102, 204, 0.8)',
                                 borderColor: 'rgba(0, 102, 204, 1)',
                                 borderWidth: 2
@@ -1475,10 +1494,15 @@
                         }
                     });
                 } else {
+                    // Si no hay dataset_available pero tampoco hay error, puede ser un problema de formato
+                    console.error('Error: dataset_available es false o no existe en la respuesta:', data);
                     loadingDiv.innerHTML = `
                         <div class="result-box error">
                             <h3><i class="fas fa-exclamation-circle"></i> Error al Procesar Estadísticas</h3>
                             <p>No se pudieron obtener las estadísticas del dataset.</p>
+                            ${data.error ? `<p><strong>Error del servidor:</strong> ${data.error}</p>` : ''}
+                            <p style="margin-top: 10px;"><strong>Respuesta del servidor:</strong></p>
+                            <pre style="background: white; padding: 10px; border-radius: 5px; overflow-x: auto; font-size: 0.85em; max-height: 200px; overflow-y: auto;">${JSON.stringify(data, null, 2)}</pre>
                         </div>
                     `;
                 }

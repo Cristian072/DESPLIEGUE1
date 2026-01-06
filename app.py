@@ -530,41 +530,80 @@ def get_stats():
         # Convertir fechas
         df['Fecha'] = pd.to_datetime(df['Fecha'], format='%d/%m/%Y', errors='coerce')
         
+        # Calcular estadísticas de forma segura
+        delays_dep_mean = float(df['Retraso_Salida'].mean()) if 'Retraso_Salida' in df.columns else 0.0
+        delays_dep_std = float(df['Retraso_Salida'].std()) if 'Retraso_Salida' in df.columns else 0.0
+        delays_dep_max = float(df['Retraso_Salida'].max()) if 'Retraso_Salida' in df.columns else 0.0
+        
+        delays_arr_mean = float(df['Retraso_llegada'].mean()) if 'Retraso_llegada' in df.columns else 0.0
+        delays_arr_std = float(df['Retraso_llegada'].std()) if 'Retraso_llegada' in df.columns else 0.0
+        delays_arr_max = float(df['Retraso_llegada'].max()) if 'Retraso_llegada' in df.columns else 0.0
+        
+        delays_weather_mean = float(df['Retraso_Clima'].mean()) if 'Retraso_Clima' in df.columns else 0.0
+        delays_weather_max = float(df['Retraso_Clima'].max()) if 'Retraso_Clima' in df.columns else 0.0
+        
+        fecha_min = df['Fecha'].min() if 'Fecha' in df.columns else None
+        fecha_max = df['Fecha'].max() if 'Fecha' in df.columns else None
+        
         stats = {
             'dataset_available': True,
             'total_flights': len(df),
             'date_range': {
-                'start': df['Fecha'].min().strftime('%Y-%m-%d') if pd.notna(df['Fecha'].min()) else None,
-                'end': df['Fecha'].max().strftime('%Y-%m-%d') if pd.notna(df['Fecha'].max()) else None
+                'start': fecha_min.strftime('%Y-%m-%d') if pd.notna(fecha_min) and fecha_min is not None else None,
+                'end': fecha_max.strftime('%Y-%m-%d') if pd.notna(fecha_max) and fecha_max is not None else None
             },
             'delays': {
                 'departure': {
-                    'mean': float(df['Retraso_Salida'].mean()),
-                    'std': float(df['Retraso_Salida'].std()),
-                    'max': float(df['Retraso_Salida'].max())
+                    'mean': delays_dep_mean,
+                    'std': delays_dep_std,
+                    'max': delays_dep_max
                 },
                 'arrival': {
-                    'mean': float(df['Retraso_llegada'].mean()),
-                    'std': float(df['Retraso_llegada'].std()),
-                    'max': float(df['Retraso_llegada'].max())
+                    'mean': delays_arr_mean,
+                    'std': delays_arr_std,
+                    'max': delays_arr_max
                 },
                 'weather': {
-                    'mean': float(df['Retraso_Clima'].mean()),
-                    'max': float(df['Retraso_Clima'].max())
+                    'mean': delays_weather_mean,
+                    'max': delays_weather_max
                 }
             },
-            'top_routes': df.groupby(['Origen', 'Destino']).size().nlargest(10).to_dict(),
-            'top_origins': df['Origen'].value_counts().head(10).to_dict(),
-            'top_destinations': df['Destino'].value_counts().head(10).to_dict()
+            'top_routes': {},
+            'top_origins': {},
+            'top_destinations': {}
         }
+        
+        # Calcular top routes, origins y destinations de forma segura
+        try:
+            if 'Origen' in df.columns and 'Destino' in df.columns:
+                routes = df.groupby(['Origen', 'Destino']).size().nlargest(10)
+                # Convertir tuplas a strings para JSON
+                stats['top_routes'] = {f"{k[0]} → {k[1]}": int(v) for k, v in routes.items()}
+        except Exception as e:
+            print(f"Error calculando top routes: {e}")
+        
+        try:
+            if 'Origen' in df.columns:
+                stats['top_origins'] = df['Origen'].value_counts().head(10).to_dict()
+        except Exception as e:
+            print(f"Error calculando top origins: {e}")
+        
+        try:
+            if 'Destino' in df.columns:
+                stats['top_destinations'] = df['Destino'].value_counts().head(10).to_dict()
+        except Exception as e:
+            print(f"Error calculando top destinations: {e}")
         
         return jsonify(stats)
     
     except Exception as e:
         import traceback
+        error_trace = traceback.format_exc()
+        print(f"Error en /api/stats: {error_trace}")
         return jsonify({
             'error': str(e),
-            'traceback': traceback.format_exc() if app.debug else None
+            'dataset_available': False,
+            'traceback': error_trace if app.debug else None
         }), 500
 
 @app.route('/api/query', methods=['POST'])
