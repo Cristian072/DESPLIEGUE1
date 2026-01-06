@@ -502,6 +502,9 @@
             <button class="nav-tab" onclick="mostrarTab('estadisticas')">
                 <i class="fas fa-chart-bar"></i> Estadísticas
             </button>
+            <button class="nav-tab" onclick="mostrarTab('informacion')">
+                <i class="fas fa-info-circle"></i> Información
+            </button>
             <button class="nav-tab" onclick="mostrarTab('mantenimiento')">
                 <i class="fas fa-cogs"></i> Mantenimiento
             </button>
@@ -654,6 +657,169 @@
             </div>
         </div>
         
+        <!-- Tab Información -->
+        <div id="informacion" class="tab-content">
+            <h2 class="section-title"><i class="fas fa-info-circle"></i> Información del Sistema</h2>
+            
+            <div class="info-box" style="margin-bottom: 30px;">
+                <h3 style="color: var(--azul-primario); margin-bottom: 15px;"><i class="fas fa-question-circle"></i> ¿Qué es este sistema?</h3>
+                <p>Este sistema utiliza <strong>Aprendizaje No Supervisado (K-Means Clustering)</strong> para agrupar vuelos según patrones similares de retrasos, ayudando a las aerolíneas a identificar problemas operacionales y tomar decisiones informadas.</p>
+            </div>
+            
+            <div class="info-box" style="margin-bottom: 30px; background: linear-gradient(135deg, #E8F5E9 0%, #C8E6C9 100%); border-left: 4px solid var(--exito);">
+                <h3 style="color: var(--azul-primario); margin-bottom: 15px;"><i class="fas fa-plane"></i> ¿Cómo ayuda esto a una aerolínea?</h3>
+                <div style="margin-top: 20px;">
+                    <div style="margin-bottom: 20px;">
+                        <h4 style="color: var(--azul-oscuro); margin-bottom: 10px;"><i class="fas fa-bullseye"></i> 1. Identificación de Patrones</h4>
+                        <p>El sistema agrupa automáticamente vuelos con características similares, permitiendo identificar patrones que no son evidentes a simple vista. Por ejemplo, puede detectar que ciertas rutas o horarios tienen consistentemente más retrasos.</p>
+                    </div>
+                    
+                    <div style="margin-bottom: 20px;">
+                        <h4 style="color: var(--azul-oscuro); margin-bottom: 10px;"><i class="fas fa-chart-line"></i> 2. Optimización de Recursos</h4>
+                        <p>Al conocer qué vuelos tienen mayor probabilidad de retraso, la aerolínea puede asignar recursos adicionales (personal, equipos, puertas) de manera proactiva, reduciendo el impacto de los retrasos.</p>
+                    </div>
+                    
+                    <div style="margin-bottom: 20px;">
+                        <h4 style="color: var(--azul-oscuro); margin-bottom: 10px;"><i class="fas fa-dollar-sign"></i> 3. Reducción de Costos</h4>
+                        <p>Los retrasos generan costos significativos: compensaciones a pasajeros, reasignación de tripulaciones, mantenimiento adicional de aviones, etc. Identificar y prevenir retrasos reduce estos costos operativos.</p>
+                    </div>
+                    
+                    <div style="margin-bottom: 20px;">
+                        <h4 style="color: var(--azul-oscuro); margin-bottom: 10px;"><i class="fas fa-smile"></i> 4. Mejora de Satisfacción del Cliente</h4>
+                        <p>Vuelos más puntuales significan pasajeros más satisfechos, lo que se traduce en mejores reseñas, mayor fidelidad y aumento en las ventas.</p>
+                    </div>
+                    
+                    <div style="margin-bottom: 20px;">
+                        <h4 style="color: var(--azul-oscuro); margin-bottom: 10px;"><i class="fas fa-lightbulb"></i> 5. Toma de Decisiones Basada en Datos</h4>
+                        <p>En lugar de decisiones basadas en intuición, el sistema proporciona evidencia clara sobre qué rutas, horarios o condiciones requieren atención prioritaria.</p>
+                    </div>
+                    
+                    <div>
+                        <h4 style="color: var(--azul-oscuro); margin-bottom: 10px;"><i class="fas fa-sync-alt"></i> 6. Mejora Continua</h4>
+                        <p>Al agregar nuevos datos periódicamente, el modelo se reentrena automáticamente, adaptándose a cambios en las operaciones y manteniendo las recomendaciones actualizadas.</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="info-box" style="margin-bottom: 30px; background: linear-gradient(135deg, #E3F2FD 0%, #BBDEFB 100%); border-left: 4px solid var(--azul-primario);">
+                <h3 style="color: var(--azul-primario); margin-bottom: 15px;"><i class="fas fa-cogs"></i> ¿Cómo funciona el sistema?</h3>
+                <div style="margin-top: 20px;">
+                    <div style="margin-bottom: 25px;">
+                        <h4 style="color: var(--azul-oscuro); margin-bottom: 10px;"><i class="fas fa-step-forward"></i> Paso 1: Entrenamiento Inicial</h4>
+                        <p>Entrene el modelo en su computadora con su dataset inicial (ej: 10,000 vuelos). El sistema analiza los datos y crea grupos (clusters) de vuelos similares basándose en:</p>
+                        <ul style="margin-left: 30px; margin-top: 10px; line-height: 1.8;">
+                            <li>Retrasos de salida y llegada</li>
+                            <li>Retrasos por clima</li>
+                            <li>Duración del vuelo</li>
+                            <li>Hora de salida</li>
+                            <li>Día de la semana</li>
+                            <li>Rutas (origen-destino)</li>
+                        </ul>
+                    </div>
+                    
+                    <div style="margin-bottom: 25px;">
+                        <h4 style="color: var(--azul-oscuro); margin-bottom: 10px;"><i class="fas fa-cloud-upload-alt"></i> Paso 2: Despliegue en Railway</h4>
+                        <p>Suba el modelo entrenado y el dataset a Railway. El sistema estará listo para usar en la web, permitiendo:</p>
+                        <ul style="margin-left: 30px; margin-top: 10px; line-height: 1.8;">
+                            <li>Visualizar los clusters identificados</li>
+                            <li>Predecir a qué cluster pertenece un nuevo vuelo</li>
+                            <li>Consultar vuelos específicos</li>
+                            <li>Ver estadísticas y análisis</li>
+                        </ul>
+                    </div>
+                    
+                    <div style="margin-bottom: 25px;">
+                        <h4 style="color: var(--azul-oscuro); margin-bottom: 10px;"><i class="fas fa-plus-circle"></i> Paso 3: Agregar Nuevos Datos</h4>
+                        <p>Cuando tenga nuevos datos (ej: 1,000 vuelos adicionales), simplemente súbalos desde la sección "Mantenimiento". El sistema:</p>
+                        <ul style="margin-left: 30px; margin-top: 10px; line-height: 1.8;">
+                            <li>Valida que las columnas coincidan</li>
+                            <li>Combina los nuevos datos con el dataset existente</li>
+                            <li>Elimina duplicados automáticamente</li>
+                            <li><strong>Reentrena el modelo automáticamente</strong> con todos los datos</li>
+                            <li>Actualiza las recomendaciones y análisis</li>
+                        </ul>
+                        <p style="margin-top: 15px; padding: 15px; background: white; border-radius: 8px; border-left: 4px solid var(--exito);">
+                            <strong><i class="fas fa-check-circle"></i> Ventaja:</strong> No necesita reentrenar manualmente. El sistema se actualiza automáticamente cada vez que agrega datos nuevos.
+                        </p>
+                    </div>
+                    
+                    <div>
+                        <h4 style="color: var(--azul-oscuro); margin-bottom: 10px;"><i class="fas fa-chart-bar"></i> Paso 4: Análisis y Acción</h4>
+                        <p>Use las visualizaciones y recomendaciones del sistema para:</p>
+                        <ul style="margin-left: 30px; margin-top: 10px; line-height: 1.8;">
+                            <li>Identificar rutas problemáticas</li>
+                            <li>Asignar recursos donde más se necesitan</li>
+                            <li>Tomar decisiones operacionales informadas</li>
+                            <li>Monitorear mejoras a lo largo del tiempo</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="info-box" style="margin-bottom: 30px; background: linear-gradient(135deg, #FFF3E0 0%, #FFE0B2 100%); border-left: 4px solid var(--advertencia);">
+                <h3 style="color: var(--azul-primario); margin-bottom: 15px;"><i class="fas fa-lightbulb"></i> Interpretación de los Clusters</h3>
+                <div style="margin-top: 20px;">
+                    <p style="margin-bottom: 15px;">Cada cluster representa un grupo de vuelos con características similares. El sistema proporciona:</p>
+                    
+                    <div style="margin-bottom: 20px; padding: 15px; background: white; border-radius: 8px;">
+                        <h4 style="color: var(--azul-oscuro); margin-bottom: 10px;"><i class="fas fa-tag"></i> Tipo de Cluster</h4>
+                        <ul style="margin-left: 20px; line-height: 1.8;">
+                            <li><strong>Puntual:</strong> Vuelos con retrasos mínimos - mantener estándares</li>
+                            <li><strong>Retraso Moderado:</strong> Oportunidades de mejora identificadas</li>
+                            <li><strong>Afectado por Clima:</strong> Retrasos principalmente por factores externos</li>
+                            <li><strong>Alto Retraso:</strong> Requiere atención inmediata y análisis profundo</li>
+                        </ul>
+                    </div>
+                    
+                    <div style="margin-bottom: 20px; padding: 15px; background: white; border-radius: 8px;">
+                        <h4 style="color: var(--azul-oscuro); margin-bottom: 10px;"><i class="fas fa-list-ul"></i> Recomendaciones Específicas</h4>
+                        <p>Cada cluster incluye recomendaciones personalizadas basadas en sus características. Estas recomendaciones ayudan a:</p>
+                        <ul style="margin-left: 20px; margin-top: 10px; line-height: 1.8;">
+                            <li>Priorizar acciones correctivas</li>
+                            <li>Asignar recursos eficientemente</li>
+                            <li>Implementar mejoras específicas</li>
+                            <li>Prevenir problemas futuros</li>
+                        </ul>
+                    </div>
+                    
+                    <div style="padding: 15px; background: white; border-radius: 8px;">
+                        <h4 style="color: var(--azul-oscuro); margin-bottom: 10px;"><i class="fas fa-chart-line"></i> Impacto</h4>
+                        <p>El sistema también indica el impacto esperado de cada cluster en términos de:</p>
+                        <ul style="margin-left: 20px; margin-top: 10px; line-height: 1.8;">
+                            <li>Satisfacción del cliente</li>
+                            <li>Costos operativos</li>
+                            <li>Eficiencia operacional</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="info-box" style="background: linear-gradient(135deg, #F3E5F5 0%, #E1BEE7 100%); border-left: 4px solid #9C27B0;">
+                <h3 style="color: var(--azul-primario); margin-bottom: 15px;"><i class="fas fa-question-circle"></i> Preguntas Frecuentes</h3>
+                <div style="margin-top: 20px;">
+                    <div style="margin-bottom: 20px;">
+                        <h4 style="color: var(--azul-oscuro); margin-bottom: 8px;"><strong>¿Con qué frecuencia debo agregar nuevos datos?</strong></h4>
+                        <p>Recomendamos agregar nuevos datos periódicamente (semanal o mensualmente) para mantener el modelo actualizado y reflejar cambios en las operaciones.</p>
+                    </div>
+                    
+                    <div style="margin-bottom: 20px;">
+                        <h4 style="color: var(--azul-oscuro); margin-bottom: 8px;"><strong>¿Qué pasa si las columnas de mi nuevo archivo no coinciden exactamente?</strong></h4>
+                        <p>El sistema valida automáticamente las columnas y le indicará exactamente qué columnas faltan o sobran. Asegúrese de que su archivo tenga las mismas columnas que el dataset original.</p>
+                    </div>
+                    
+                    <div style="margin-bottom: 20px;">
+                        <h4 style="color: var(--azul-oscuro); margin-bottom: 8px;"><strong>¿Cuánto tiempo toma reentrenar el modelo?</strong></h4>
+                        <p>El tiempo depende del tamaño de los datos, pero típicamente toma entre 2-10 minutos. El sistema le notificará cuando el reentrenamiento esté completo.</p>
+                    </div>
+                    
+                    <div>
+                        <h4 style="color: var(--azul-oscuro); margin-bottom: 8px;"><strong>¿Puedo usar el sistema sin tener conocimientos técnicos?</strong></h4>
+                        <p>Sí, la interfaz está diseñada para ser intuitiva. Solo necesita subir sus archivos CSV y el sistema se encarga del resto automáticamente.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
         <!-- Tab Mantenimiento -->
         <div id="mantenimiento" class="tab-content">
             <h2 class="section-title"><i class="fas fa-cogs"></i> Mantenimiento y Entrenamiento</h2>
@@ -664,13 +830,18 @@
                 <p id="estadoModeloTexto">Verificando estado del modelo...</p>
             </div>
             
-            <div class="info-box">
-                <p><strong><i class="fas fa-info-circle"></i> Flujo de Trabajo:</strong></p>
-                <ol style="margin-left: 20px; margin-top: 10px;">
-                    <li><strong>Paso 1:</strong> Entrene el modelo inicial con su dataset CSV</li>
-                    <li><strong>Paso 2:</strong> Suba más data cuando tenga nueva información</li>
-                    <li><strong>Paso 3:</strong> Reentrene el modelo con toda la data combinada</li>
+            <div class="info-box" style="background: linear-gradient(135deg, #E3F2FD 0%, #BBDEFB 100%); border-left: 4px solid var(--azul-primario);">
+                <p><strong><i class="fas fa-info-circle"></i> Flujo de Trabajo Simplificado:</strong></p>
+                <ol style="margin-left: 20px; margin-top: 15px; line-height: 2;">
+                    <li><strong>Paso 1:</strong> Entrene el modelo inicial en su computadora con su dataset (ej: 10,000 vuelos)</li>
+                    <li><strong>Paso 2:</strong> Suba el modelo entrenado y el dataset a Railway</li>
+                    <li><strong>Paso 3:</strong> El sistema ya está listo para usar en la web</li>
+                    <li><strong>Paso 4:</strong> Cuando tenga nuevos datos (ej: 1,000 vuelos más), súbalos desde aquí</li>
+                    <li><strong>Paso 5:</strong> El sistema <strong>reentrena automáticamente</strong> - ¡no necesita hacer nada más!</li>
                 </ol>
+                <p style="margin-top: 15px; padding: 12px; background: white; border-radius: 8px; border-left: 4px solid var(--exito);">
+                    <strong><i class="fas fa-magic"></i> Automático:</strong> Cada vez que suba nuevos datos, el sistema los combina, elimina duplicados y reentrena el modelo automáticamente. Solo necesita esperar unos minutos.
+                </p>
             </div>
             
             <!-- Entrenamiento Inicial -->
@@ -1058,6 +1229,9 @@
                                          chars.cluster_type === 'Weather Affected' ? 'Afectado por Clima' :
                                          chars.cluster_type === 'High Delay' ? 'Alto Retraso' : 'Retraso Moderado';
                         
+                        const recommendations = chars.recommendations || [];
+                        const impact = chars.impact || 'No disponible';
+                        
                         return `
                             <div class="cluster-card">
                                 <h3><i class="fas fa-layer-group"></i> Cluster ${c.cluster}</h3>
@@ -1066,6 +1240,18 @@
                                 <p><strong><i class="fas fa-clock"></i> Retraso Llegada Promedio:</strong> ${chars.avg_arrival_delay?.toFixed(2) || 'N/A'} min</p>
                                 <p><strong><i class="fas fa-cloud-rain"></i> Retraso Clima Promedio:</strong> ${chars.avg_weather_delay?.toFixed(2) || 'N/A'} min</p>
                                 <span class="badge ${badgeClass}">${tipoTexto}</span>
+                                
+                                <div style="margin-top: 20px; padding-top: 15px; border-top: 2px solid var(--gris-medio);">
+                                    <p style="margin-bottom: 10px;"><strong><i class="fas fa-chart-line"></i> Impacto:</strong></p>
+                                    <p style="color: var(--gris-oscuro); font-size: 0.95em; margin-bottom: 15px;">${impact}</p>
+                                    
+                                    ${recommendations.length > 0 ? `
+                                        <p style="margin-bottom: 10px;"><strong><i class="fas fa-lightbulb"></i> Recomendaciones:</strong></p>
+                                        <ul style="margin-left: 20px; color: var(--gris-oscuro); font-size: 0.9em; line-height: 1.6;">
+                                            ${recommendations.map(rec => `<li>${rec}</li>`).join('')}
+                                        </ul>
+                                    ` : ''}
+                                </div>
                             </div>
                         `;
                     }).join('');
@@ -1651,25 +1837,7 @@
         });
         
         // Actualizar estado del modelo cuando se cambia a la pestaña de mantenimiento
-        function mostrarTab(nombreTab) {
-            document.querySelectorAll('.tab-content').forEach(tab => {
-                tab.classList.remove('active');
-            });
-            document.querySelectorAll('.nav-tab').forEach(btn => {
-                btn.classList.remove('active');
-            });
-            
-            document.getElementById(nombreTab).classList.add('active');
-            event.target.classList.add('active');
-            
-            if (nombreTab === 'clusters') {
-                cargarClusters();
-            } else if (nombreTab === 'estadisticas') {
-                cargarEstadisticas();
-            } else if (nombreTab === 'mantenimiento') {
-                actualizarEstadoModelo(); // Actualizar estado cuando se abre la pestaña
-            }
-        }
+        // (La función mostrarTab ya está definida arriba)
     </script>
 </body>
 </html>

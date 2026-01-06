@@ -332,13 +332,59 @@ def get_clusters():
                     # Agregar interpretación del cluster basada en centroides
                     if len(center) >= 3:
                         try:
+                            dep_delay = float(center[0])
+                            arr_delay = float(center[1])
+                            weather_delay = float(center[2])
+                            
+                            # Determinar tipo de cluster
+                            if dep_delay > 20 or arr_delay > 20:
+                                cluster_type = 'High Delay'
+                                recommendations = [
+                                    'Revisar operaciones en este aeropuerto/ruta específica',
+                                    'Considerar aumentar tiempo de conexión para vuelos afectados',
+                                    'Analizar causas operacionales (equipos, personal, mantenimiento)',
+                                    'Implementar protocolos de recuperación más rápidos',
+                                    'Monitorear estas rutas con mayor frecuencia'
+                                ]
+                                impact = 'Alto impacto en satisfacción del cliente y costos operativos'
+                            elif weather_delay > 5:
+                                cluster_type = 'Weather Affected'
+                                recommendations = [
+                                    'Mejorar pronósticos meteorológicos y planificación anticipada',
+                                    'Tener planes de contingencia para condiciones climáticas adversas',
+                                    'Comunicar proactivamente a pasajeros sobre posibles retrasos',
+                                    'Considerar rutas alternativas durante temporadas de mal tiempo',
+                                    'Invertir en sistemas de detección temprana de condiciones climáticas'
+                                ]
+                                impact = 'Impacto moderado, principalmente por factores externos'
+                            elif dep_delay < 5 and arr_delay < 5:
+                                cluster_type = 'On Time'
+                                recommendations = [
+                                    'Mantener los estándares operativos actuales',
+                                    'Documentar mejores prácticas de estas rutas',
+                                    'Replicar estrategias exitosas en otras rutas',
+                                    'Usar como referencia para benchmarking interno',
+                                    'Comunicar éxitos al equipo para motivación'
+                                ]
+                                impact = 'Excelente desempeño, mantener y replicar'
+                            else:
+                                cluster_type = 'Moderate Delay'
+                                recommendations = [
+                                    'Identificar causas específicas de retrasos moderados',
+                                    'Optimizar tiempos de embarque y desembarque',
+                                    'Revisar asignación de puertas y recursos',
+                                    'Mejorar coordinación entre departamentos',
+                                    'Implementar mejoras incrementales en procesos'
+                                ]
+                                impact = 'Impacto moderado, oportunidades de mejora identificadas'
+                            
                             cluster_data['characteristics'] = {
-                                'avg_departure_delay': float(center[0]),
-                                'avg_arrival_delay': float(center[1]),
-                                'avg_weather_delay': float(center[2]),
-                                'cluster_type': 'High Delay' if center[0] > 20 or center[1] > 20 else 
-                                               'Weather Affected' if center[2] > 5 else 
-                                               'On Time' if center[0] < 5 and center[1] < 5 else 'Moderate Delay'
+                                'avg_departure_delay': dep_delay,
+                                'avg_arrival_delay': arr_delay,
+                                'avg_weather_delay': weather_delay,
+                                'cluster_type': cluster_type,
+                                'recommendations': recommendations,
+                                'impact': impact
                             }
                         except Exception as char_error:
                             print(f"Error calculando características del cluster {i}: {str(char_error)}")
