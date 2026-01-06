@@ -11,7 +11,8 @@ RUN pip install --no-cache-dir --upgrade pip && \
 COPY app.py train_model.py ./
 COPY templates/ templates/
 COPY scripts/ scripts/
-RUN mkdir -p models
+# Copiar modelos entrenados (deben estar en el repositorio Git)
+COPY models/ models/
 
 # Copiar script de inicio
 COPY entrypoint.sh ./
