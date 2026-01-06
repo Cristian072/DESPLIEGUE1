@@ -659,31 +659,87 @@ def upload_data():
             file_size = os.path.getsize(file_path)
             print(f"Tamaño del archivo: {file_size} bytes")
             
+            # Verificar que el archivo no esté vacío
+            if file_size == 0:
+                os.remove(file_path)
+                return jsonify({'error': 'El archivo está vacío'}), 400
+            
             # Si existe el dataset principal, combinarlo; si no, usar el nuevo como principal
             if os.path.exists(DATA_PATH):
                 print("Combinando con dataset existente...")
-                # Leer muestras para verificar formato
-                df_existing_sample = pd.read_csv(DATA_PATH, nrows=10)
-                df_new_sample = pd.read_csv(file_path, nrows=10)
+                # Leer muestras para verificar formato con manejo de encoding
+                try:
+                    df_existing_sample = pd.read_csv(DATA_PATH, nrows=10, encoding='utf-8')
+                except UnicodeDecodeError:
+                    try:
+                        df_existing_sample = pd.read_csv(DATA_PATH, nrows=10, encoding='latin-1')
+                    except:
+                        df_existing_sample = pd.read_csv(DATA_PATH, nrows=10, encoding='utf-8', errors='ignore')
                 
-                # Normalizar nombres de columnas
-                df_existing_sample.columns = df_existing_sample.columns.str.strip()
-                df_new_sample.columns = df_new_sample.columns.str.strip()
+                try:
+                    df_new_sample = pd.read_csv(file_path, nrows=10, encoding='utf-8')
+                except UnicodeDecodeError:
+                    try:
+                        df_new_sample = pd.read_csv(file_path, nrows=10, encoding='latin-1')
+                    except:
+                        df_new_sample = pd.read_csv(file_path, nrows=10, encoding='utf-8', errors='ignore')
                 
-                if list(df_existing_sample.columns) != list(df_new_sample.columns):
+                # Normalizar nombres de columnas (strip y convertir a string)
+                df_existing_sample.columns = df_existing_sample.columns.str.strip().astype(str)
+                df_new_sample.columns = df_new_sample.columns.str.strip().astype(str)
+                
+                # Comparar columnas de manera flexible (ignorar orden)
+                existing_cols_set = set(df_existing_sample.columns)
+                new_cols_set = set(df_new_sample.columns)
+                
+                if existing_cols_set != new_cols_set:
+                    missing_cols = existing_cols_set - new_cols_set
+                    extra_cols = new_cols_set - existing_cols_set
+                    error_msg = 'Las columnas no coinciden.\n'
+                    if missing_cols:
+                        error_msg += f'Columnas faltantes en el nuevo archivo: {list(missing_cols)}\n'
+                    if extra_cols:
+                        error_msg += f'Columnas adicionales en el nuevo archivo: {list(extra_cols)}\n'
+                    error_msg += f'\nColumnas esperadas: {sorted(list(existing_cols_set))}\n'
+                    error_msg += f'Columnas recibidas: {sorted(list(new_cols_set))}'
+                    
                     os.remove(file_path)
                     return jsonify({
-                        'error': f'Las columnas no coinciden. Esperadas: {list(df_existing_sample.columns)}, Recibidas: {list(df_new_sample.columns)}'
+                        'error': error_msg,
+                        'expected_columns': sorted(list(existing_cols_set)),
+                        'received_columns': sorted(list(new_cols_set)),
+                        'missing_columns': list(missing_cols) if missing_cols else [],
+                        'extra_columns': list(extra_cols) if extra_cols else []
                     }), 400
                 
-                # Combinar archivos completos
+                # Reordenar columnas del nuevo archivo para que coincidan con el existente
+                column_order = list(df_existing_sample.columns)
+                
+                # Combinar archivos completos con manejo de encoding
                 print("Leyendo archivos completos...")
-                df_existing = pd.read_csv(DATA_PATH)
-                df_new = pd.read_csv(file_path)
+                try:
+                    df_existing = pd.read_csv(DATA_PATH, encoding='utf-8')
+                except UnicodeDecodeError:
+                    try:
+                        df_existing = pd.read_csv(DATA_PATH, encoding='latin-1')
+                    except:
+                        df_existing = pd.read_csv(DATA_PATH, encoding='utf-8', errors='ignore')
+                
+                try:
+                    df_new = pd.read_csv(file_path, encoding='utf-8')
+                except UnicodeDecodeError:
+                    try:
+                        df_new = pd.read_csv(file_path, encoding='latin-1')
+                    except:
+                        df_new = pd.read_csv(file_path, encoding='utf-8', errors='ignore')
                 
                 # Normalizar columnas
-                df_existing.columns = df_existing.columns.str.strip()
-                df_new.columns = df_new.columns.str.strip()
+                df_existing.columns = df_existing.columns.str.strip().astype(str)
+                df_new.columns = df_new.columns.str.strip().astype(str)
+                
+                # Reordenar columnas del nuevo dataset para que coincidan
+                if set(df_new.columns) == set(column_order):
+                    df_new = df_new[column_order]
                 
                 # Crear backup
                 backup_path = f"{DATA_PATH}.backup_{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')}"
@@ -694,10 +750,23 @@ def upload_data():
                 print("Combinando datasets...")
                 df_combined = pd.concat([df_existing, df_new], ignore_index=True)
                 before_dedup = len(df_combined)
-                df_combined = df_combined.drop_duplicates(
-                    subset=['Fecha', 'Num_vuelo', 'Origen', 'Destino', 'Hora_salida'],
-                    keep='last'
-                )
+                
+                # Determinar columnas para identificar duplicados (solo las que existen)
+                dedup_cols = ['Fecha', 'Origen', 'Destino', 'Hora_salida']
+                if 'Num_vuelo' in df_combined.columns:
+                    dedup_cols.append('Num_vuelo')
+                
+                # Verificar que todas las columnas existan
+                available_dedup_cols = [col for col in dedup_cols if col in df_combined.columns]
+                
+                if len(available_dedup_cols) > 0:
+                    df_combined = df_combined.drop_duplicates(
+                        subset=available_dedup_cols,
+                        keep='last'
+                    )
+                else:
+                    print("Advertencia: No se pudieron eliminar duplicados - columnas requeridas no encontradas")
+                
                 after_dedup = len(df_combined)
                 duplicates_removed = before_dedup - after_dedup
                 
@@ -707,9 +776,41 @@ def upload_data():
                     message += f'. Se eliminaron {duplicates_removed} duplicados'
             else:
                 # Usar el nuevo archivo como principal
+                # Primero validar que el archivo tenga las columnas necesarias
+                try:
+                    df_new_check = pd.read_csv(file_path, nrows=10, encoding='utf-8')
+                except UnicodeDecodeError:
+                    try:
+                        df_new_check = pd.read_csv(file_path, nrows=10, encoding='latin-1')
+                    except:
+                        df_new_check = pd.read_csv(file_path, nrows=10, encoding='utf-8', errors='ignore')
+                
+                df_new_check.columns = df_new_check.columns.str.strip().astype(str)
+                
+                # Verificar columnas mínimas requeridas
+                required_cols = ['Fecha', 'Origen', 'Destino', 'Hora_salida', 'Hora_llegada', 
+                               'Retraso_Salida', 'Retraso_llegada', 'Retraso_Clima']
+                missing_required = [col for col in required_cols if col not in df_new_check.columns]
+                
+                if missing_required:
+                    os.remove(file_path)
+                    return jsonify({
+                        'error': f'El archivo no tiene las columnas mínimas requeridas. Faltan: {missing_required}',
+                        'required_columns': required_cols,
+                        'received_columns': list(df_new_check.columns)
+                    }), 400
+                
                 shutil.move(file_path, DATA_PATH)
                 print(f"Dataset principal creado: {DATA_PATH}")
-                df_new = pd.read_csv(DATA_PATH)
+                
+                try:
+                    df_new = pd.read_csv(DATA_PATH, encoding='utf-8')
+                except UnicodeDecodeError:
+                    try:
+                        df_new = pd.read_csv(DATA_PATH, encoding='latin-1')
+                    except:
+                        df_new = pd.read_csv(DATA_PATH, encoding='utf-8', errors='ignore')
+                
                 message = f'Dataset principal creado desde archivo subido. Total: {len(df_new)} filas'
             
             # Limpiar archivo temporal si aún existe
@@ -750,14 +851,30 @@ def upload_data():
             
             # Extraer mensaje de error más claro
             error_msg = str(e)
-            if 'UnicodeEncodeError' in error_msg or 'charmap' in error_msg:
-                error_msg = 'Error de codificación de caracteres. Asegúrese de que el archivo use codificación UTF-8.'
-            elif 'MemoryError' in error_msg:
-                error_msg = 'Error de memoria. El archivo es demasiado grande. Intente con un archivo más pequeño.'
+            error_type = type(e).__name__
+            
+            # Mensajes de error más descriptivos
+            if 'UnicodeDecodeError' in error_type or 'UnicodeEncodeError' in error_type or 'charmap' in error_msg:
+                error_msg = 'Error de codificación de caracteres. El archivo debe usar codificación UTF-8 o Latin-1. Intente guardar el archivo como UTF-8.'
+            elif 'MemoryError' in error_type or 'MemoryError' in error_msg:
+                error_msg = 'Error de memoria. El archivo es demasiado grande. Intente con un archivo más pequeño o divida los datos en lotes.'
+            elif 'KeyError' in error_type:
+                error_msg = f'Error: Columna faltante en el archivo. {error_msg}'
+            elif 'ValueError' in error_type:
+                error_msg = f'Error de formato en los datos: {error_msg}'
+            elif 'EmptyDataError' in error_type:
+                error_msg = 'El archivo CSV está vacío o no tiene datos válidos.'
+            elif 'ParserError' in error_type:
+                error_msg = f'Error al leer el archivo CSV. Verifique que el formato sea correcto: {error_msg}'
+            
+            print(f"Error detallado: {error_type}: {error_msg}")
+            print(f"Traceback completo: {error_trace}")
             
             return jsonify({
                 'success': False,
-                'error': f'Error procesando archivo: {error_msg}'
+                'error': f'Error procesando archivo: {error_msg}',
+                'error_type': error_type,
+                'traceback': error_trace if app.debug else None
             }), 500
     
     except Exception as e:
