@@ -7,6 +7,12 @@ import sys
 import argparse
 from datetime import datetime
 
+# Configurar codificación UTF-8 para evitar problemas en Windows
+if sys.platform == 'win32':
+    import io
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
+
 def validate_data(df):
     """Validar que el DataFrame tenga las columnas requeridas"""
     required_columns = [
@@ -93,11 +99,11 @@ def main():
     success = process_new_data(args.new_data, args.main_data)
     
     if success:
-        print("\n✅ Data processing completed successfully!")
+        print("\n[SUCCESS] Data processing completed successfully!")
         print("You can now retrain the model using: python train_model.py")
         sys.exit(0)
     else:
-        print("\n❌ Data processing failed!")
+        print("\n[ERROR] Data processing failed!")
         sys.exit(1)
 
 if __name__ == '__main__':

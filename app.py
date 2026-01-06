@@ -7,6 +7,7 @@ import joblib
 import numpy as np
 import os
 import sys
+import subprocess
 from datetime import datetime
 from sklearn.preprocessing import LabelEncoder
 from sklearn.decomposition import PCA
@@ -477,50 +478,122 @@ def upload_data():
         if not file.filename.endswith('.csv'):
             return jsonify({'error': 'Solo se admiten archivos CSV'}), 400
         
-        # Guardar archivo temporalmente
-        import tempfile
+        # Guardar archivo en el directorio actual (más confiable en Railway)
         import uuid
+        import shutil
         
         filename = f"new_data_{uuid.uuid4().hex[:8]}.csv"
-        temp_path = os.path.join(tempfile.gettempdir(), filename)
-        file.save(temp_path)
+        file_path = os.path.join('.', filename)
         
-        # Procesar nueva data
-        import subprocess
-        result = subprocess.run(
-            ['python', 'scripts/process_new_data.py', '--new-data', temp_path],
-            capture_output=True,
-            text=True,
-            timeout=600
-        )
-        
-        # Limpiar archivo temporal
         try:
-            os.remove(temp_path)
-        except:
-            pass
-        
-        if result.returncode == 0:
+            file.save(file_path)
+            print(f"Archivo guardado: {file_path}")
+            
+            if not os.path.exists(file_path):
+                return jsonify({'error': 'Error al guardar el archivo'}), 500
+            
+            file_size = os.path.getsize(file_path)
+            print(f"Tamaño del archivo: {file_size} bytes")
+            
+            # Si existe el dataset principal, combinarlo; si no, usar el nuevo como principal
+            if os.path.exists(DATA_PATH):
+                print("Combinando con dataset existente...")
+                # Leer muestras para verificar formato
+                df_existing_sample = pd.read_csv(DATA_PATH, nrows=10)
+                df_new_sample = pd.read_csv(file_path, nrows=10)
+                
+                # Normalizar nombres de columnas
+                df_existing_sample.columns = df_existing_sample.columns.str.strip()
+                df_new_sample.columns = df_new_sample.columns.str.strip()
+                
+                if list(df_existing_sample.columns) != list(df_new_sample.columns):
+                    os.remove(file_path)
+                    return jsonify({
+                        'error': f'Las columnas no coinciden. Esperadas: {list(df_existing_sample.columns)}, Recibidas: {list(df_new_sample.columns)}'
+                    }), 400
+                
+                # Combinar archivos completos
+                print("Leyendo archivos completos...")
+                df_existing = pd.read_csv(DATA_PATH)
+                df_new = pd.read_csv(file_path)
+                
+                # Normalizar columnas
+                df_existing.columns = df_existing.columns.str.strip()
+                df_new.columns = df_new.columns.str.strip()
+                
+                # Crear backup
+                backup_path = f"{DATA_PATH}.backup_{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')}"
+                df_existing.to_csv(backup_path, index=False)
+                print(f"Backup creado: {backup_path}")
+                
+                # Combinar y eliminar duplicados
+                print("Combinando datasets...")
+                df_combined = pd.concat([df_existing, df_new], ignore_index=True)
+                before_dedup = len(df_combined)
+                df_combined = df_combined.drop_duplicates(
+                    subset=['Fecha', 'Num_vuelo', 'Origen', 'Destino', 'Hora_salida'],
+                    keep='last'
+                )
+                after_dedup = len(df_combined)
+                duplicates_removed = before_dedup - after_dedup
+                
+                df_combined.to_csv(DATA_PATH, index=False)
+                message = f'Data combinada exitosamente. Total: {len(df_combined)} filas'
+                if duplicates_removed > 0:
+                    message += f'. Se eliminaron {duplicates_removed} duplicados'
+            else:
+                # Usar el nuevo archivo como principal
+                shutil.move(file_path, DATA_PATH)
+                print(f"Dataset principal creado: {DATA_PATH}")
+                df_new = pd.read_csv(DATA_PATH)
+                message = f'Dataset principal creado desde archivo subido. Total: {len(df_new)} filas'
+            
+            # Limpiar archivo temporal si aún existe
+            if os.path.exists(file_path):
+                os.remove(file_path)
+            
             # Retrenar modelo automáticamente
+            print("Iniciando retrenamiento del modelo...")
             retrain_result = subprocess.run(
                 ['python', 'train_model.py'],
                 capture_output=True,
                 text=True,
-                timeout=300
+                timeout=600,
+                env={**os.environ, 'TRAINING_MAX_ROWS': '15000'}
             )
+            
+            retrain_success = retrain_result.returncode == 0 and os.path.exists('models/flight_cluster_model.pkl')
             
             return jsonify({
                 'success': True,
-                'message': 'Data uploaded successfully',
-                'output': result.stdout,
-                'retrain_success': retrain_result.returncode == 0,
-                'retrain_output': retrain_result.stdout if retrain_result.returncode == 0 else retrain_result.stderr
+                'message': message,
+                'retrain_success': retrain_success,
+                'retrain_output': retrain_result.stdout if retrain_success else retrain_result.stderr,
+                'retrain_exit_code': retrain_result.returncode
             })
-        else:
+            
+        except Exception as e:
+            import traceback
+            error_trace = traceback.format_exc()
+            print(f"Error procesando archivo: {error_trace}")
+            
+            # Limpiar archivo temporal si existe
+            if os.path.exists(file_path):
+                try:
+                    os.remove(file_path)
+                except:
+                    pass
+            
+            # Extraer mensaje de error más claro
+            error_msg = str(e)
+            if 'UnicodeEncodeError' in error_msg or 'charmap' in error_msg:
+                error_msg = 'Error de codificación de caracteres. Asegúrese de que el archivo use codificación UTF-8.'
+            elif 'MemoryError' in error_msg:
+                error_msg = 'Error de memoria. El archivo es demasiado grande. Intente con un archivo más pequeño.'
+            
             return jsonify({
                 'success': False,
-                'error': 'Processing failed',
-                'output': result.stderr
+                'error': f'Error procesando archivo: {error_msg}'
             }), 500
     
     except Exception as e:
