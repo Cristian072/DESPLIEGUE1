@@ -291,11 +291,21 @@ def get_airports():
     """Obtener lista de aeropuertos disponibles"""
     try:
         if not os.path.exists(DATA_PATH):
-            return jsonify({'error': 'Dataset no encontrado'}), 404
+            # Devolver lista de aeropuertos comunes si el dataset no existe
+            default_airports = ['JFK', 'LAX', 'ORD', 'DFW', 'DEN', 'ATL', 'PHX', 'IAH', 'LAS', 'MIA', 
+                              'SEA', 'MSP', 'DTW', 'PHL', 'LGA', 'BOS', 'SFO', 'CLT', 'EWR', 'MCO',
+                              'SLC', 'BWI', 'DCA', 'MDW', 'HNL', 'AUS', 'PDX', 'STL', 'BNA', 'SAN']
+            return jsonify({
+                'airports': default_airports,
+                'origins': default_airports,
+                'destinations': default_airports,
+                'note': 'Dataset no encontrado, usando lista de aeropuertos por defecto'
+            })
         
-        df = pd.read_csv(DATA_PATH, usecols=['Origen', 'Destino'])
-        origins = sorted(df['Origen'].unique().tolist())
-        destinations = sorted(df['Destino'].unique().tolist())
+        # Leer solo las columnas necesarias para ahorrar memoria
+        df = pd.read_csv(DATA_PATH, usecols=['Origen', 'Destino'], nrows=50000)
+        origins = sorted(df['Origen'].dropna().unique().tolist())
+        destinations = sorted(df['Destino'].dropna().unique().tolist())
         all_airports = sorted(list(set(origins + destinations)))
         
         return jsonify({
@@ -305,7 +315,18 @@ def get_airports():
         })
     
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        import traceback
+        print(f"Error en /api/airports: {str(e)}")
+        print(traceback.format_exc())
+        # Devolver lista por defecto en caso de error
+        default_airports = ['JFK', 'LAX', 'ORD', 'DFW', 'DEN', 'ATL', 'PHX', 'IAH', 'LAS', 'MIA']
+        return jsonify({
+            'airports': default_airports,
+            'origins': default_airports,
+            'destinations': default_airports,
+            'error': f'Error al cargar aeropuertos: {str(e)}',
+            'note': 'Usando lista de aeropuertos por defecto'
+        })
 
 @app.route('/api/stats', methods=['GET'])
 def get_stats():
@@ -408,25 +429,33 @@ def query_flights():
 def retrain_model():
     """Retrenar modelo con nueva data"""
     try:
-        # Ejecutar script de entrenamiento
+        # Verificar que el dataset existe
+        if not os.path.exists(DATA_PATH):
+            return jsonify({
+                'success': False,
+                'error': 'Dataset no encontrado. Por favor, suba el archivo CSV primero.'
+            }), 400
+        
+        # Ejecutar script de entrenamiento con límite de memoria
         import subprocess
         result = subprocess.run(
             ['python', 'train_model.py'],
             capture_output=True,
             text=True,
-            timeout=300
+            timeout=600,
+            env={**os.environ, 'TRAINING_MAX_ROWS': '15000'}
         )
         
         if result.returncode == 0:
             return jsonify({
                 'success': True,
-                'message': 'Model retrained successfully',
+                'message': 'Modelo retrenado exitosamente',
                 'output': result.stdout
             })
         else:
             return jsonify({
                 'success': False,
-                'error': 'Training failed',
+                'error': 'Error en el entrenamiento del modelo',
                 'output': result.stderr
             }), 500
     
@@ -438,15 +467,15 @@ def upload_data():
     """Subir nueva data y retrenar modelo"""
     try:
         if 'file' not in request.files:
-            return jsonify({'error': 'No file provided'}), 400
+            return jsonify({'error': 'No se proporcionó ningún archivo'}), 400
         
         file = request.files['file']
         if file.filename == '':
-            return jsonify({'error': 'No file selected'}), 400
+            return jsonify({'error': 'No se seleccionó ningún archivo'}), 400
         
         # Validar extensión
         if not file.filename.endswith('.csv'):
-            return jsonify({'error': 'Only CSV files are supported'}), 400
+            return jsonify({'error': 'Solo se admiten archivos CSV'}), 400
         
         # Guardar archivo temporalmente
         import tempfile

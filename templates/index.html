@@ -704,35 +704,60 @@
             try {
                 const response = await fetch('/api/airports');
                 const data = await response.json();
-                if (response.ok) {
-                    aeropuertos = data.airports || [];
-                    
-                    // Llenar selects de origen y destino
-                    const selectOrigen = document.getElementById('origen');
-                    const selectDestino = document.getElementById('destino');
-                    const selectConsultaOrigen = document.getElementById('consulta_origen');
-                    const selectConsultaDestino = document.getElementById('consulta_destino');
-                    
+                
+                // Siempre usar los aeropuertos, incluso si hay un error
+                aeropuertos = data.airports || [];
+                
+                if (aeropuertos.length === 0) {
+                    console.warn('No se encontraron aeropuertos, usando lista por defecto');
+                    aeropuertos = ['JFK', 'LAX', 'ORD', 'DFW', 'DEN', 'ATL', 'PHX', 'IAH', 'LAS', 'MIA'];
+                }
+                
+                // Llenar selects de origen y destino
+                const selectOrigen = document.getElementById('origen');
+                const selectDestino = document.getElementById('destino');
+                const selectConsultaOrigen = document.getElementById('consulta_origen');
+                const selectConsultaDestino = document.getElementById('consulta_destino');
+                
+                if (selectOrigen && selectDestino && selectConsultaOrigen && selectConsultaDestino) {
                     aeropuertos.forEach(airport => {
-                        const option1 = new Option(airport, airport);
-                        const option2 = new Option(airport, airport);
-                        const option3 = new Option(airport, airport);
-                        const option4 = new Option(airport, airport);
-                        
-                        selectOrigen.add(option1);
-                        selectDestino.add(option2);
-                        selectConsultaOrigen.add(option3);
-                        selectConsultaDestino.add(option4);
+                        if (airport) {
+                            const option1 = new Option(airport, airport);
+                            const option2 = new Option(airport, airport);
+                            const option3 = new Option(airport, airport);
+                            const option4 = new Option(airport, airport);
+                            
+                            selectOrigen.add(option1);
+                            selectDestino.add(option2);
+                            selectConsultaOrigen.add(option3);
+                            selectConsultaDestino.add(option4);
+                        }
                     });
                     
                     // Valores por defecto
                     if (aeropuertos.includes('JFK')) {
                         selectOrigen.value = 'JFK';
-                        selectDestino.value = 'LAX';
+                        if (aeropuertos.includes('LAX')) {
+                            selectDestino.value = 'LAX';
+                        }
                     }
+                    
+                    console.log(`✅ ${aeropuertos.length} aeropuertos cargados`);
+                } else {
+                    console.error('No se encontraron los elementos select en el DOM');
                 }
             } catch (error) {
                 console.error('Error cargando aeropuertos:', error);
+                // Usar lista por defecto si falla
+                aeropuertos = ['JFK', 'LAX', 'ORD', 'DFW', 'DEN', 'ATL', 'PHX', 'IAH', 'LAS', 'MIA'];
+                const selectOrigen = document.getElementById('origen');
+                const selectDestino = document.getElementById('destino');
+                if (selectOrigen && selectDestino) {
+                    aeropuertos.forEach(airport => {
+                        selectOrigen.add(new Option(airport, airport));
+                        selectDestino.add(new Option(airport, airport));
+                    });
+                }
             }
         }
         
@@ -1240,13 +1265,31 @@
             const archivo = e.target.files[0];
             if (!archivo) return;
             
+            // Validar tipo de archivo
+            if (!archivo.name.endsWith('.csv')) {
+                const resultadoDiv = document.getElementById('resultadoUpload');
+                resultadoDiv.style.display = 'block';
+                resultadoDiv.className = 'result-box error';
+                resultadoDiv.innerHTML = `
+                    <h3><i class="fas fa-exclamation-circle"></i> Error</h3>
+                    <p>Solo se admiten archivos CSV. El archivo seleccionado es: ${archivo.name}</p>
+                `;
+                return;
+            }
+            
             const formData = new FormData();
             formData.append('file', archivo);
             
             const resultadoDiv = document.getElementById('resultadoUpload');
             resultadoDiv.style.display = 'block';
             resultadoDiv.className = 'result-box';
-            resultadoDiv.innerHTML = '<div class="loading">Subiendo y procesando</div>';
+            resultadoDiv.innerHTML = `
+                <div class="loading">
+                    <p><i class="fas fa-upload"></i> Subiendo archivo: ${archivo.name}</p>
+                    <p style="font-size: 0.9em; margin-top: 10px;">Tamaño: ${(archivo.size / 1024 / 1024).toFixed(2)} MB</p>
+                    <p style="font-size: 0.9em;">Procesando y combinando con dataset...</p>
+                </div>
+            `;
             
             try {
                 const response = await fetch('/api/upload-data', {
@@ -1256,24 +1299,38 @@
                 
                 const data = await response.json();
                 
-                if (data.success) {
+                if (response.ok && data.success) {
                     resultadoDiv.className = 'result-box success';
                     resultadoDiv.innerHTML = `
                         <h3><i class="fas fa-check-circle"></i> Data Subida Exitosamente</h3>
-                        <p>${data.message}</p>
+                        <p><strong>${data.message}</strong></p>
                         ${data.retrain_success ? 
-                            `<p style="margin-top: 15px;"><strong>¡Modelo retrenado exitosamente!</strong></p>
-                             <pre style="background: rgba(0,0,0,0.05); padding: 15px; border-radius: 8px; margin-top: 10px; overflow-x: auto; font-size: 0.9em;">${data.retrain_output}</pre>` :
-                            `<p style="margin-top: 15px; color: var(--advertencia);">El retrenamiento tuvo problemas. Puede retrenar manualmente.</p>`
+                            `<p style="margin-top: 15px;"><strong style="color: var(--exito);">¡Modelo retrenado exitosamente!</strong></p>
+                             <p style="margin-top: 10px;">Puede tomar unos momentos para que el modelo esté disponible.</p>
+                             <pre style="background: rgba(0,0,0,0.05); padding: 15px; border-radius: 8px; margin-top: 10px; overflow-x: auto; font-size: 0.85em; max-height: 200px; overflow-y: auto;">${data.retrain_output || 'Sin salida disponible'}</pre>` :
+                            `<p style="margin-top: 15px; color: var(--advertencia);">
+                                <strong>⚠️ El retrenamiento tuvo problemas.</strong><br>
+                                Exit code: ${data.retrain_exit_code || 'N/A'}<br>
+                                Puede retrenar manualmente desde la pestaña Mantenimiento.
+                            </p>
+                            <pre style="background: rgba(255,0,0,0.1); padding: 15px; border-radius: 8px; margin-top: 10px; overflow-x: auto; font-size: 0.85em; max-height: 200px; overflow-y: auto;">${data.retrain_output || 'Sin salida disponible'}</pre>`
                         }
                     `;
                 } else {
                     resultadoDiv.className = 'result-box error';
-                    resultadoDiv.innerHTML = `<h3><i class="fas fa-exclamation-circle"></i> Error en la Subida</h3><p>${data.error || data.output}</p>`;
+                    resultadoDiv.innerHTML = `
+                        <h3><i class="fas fa-exclamation-circle"></i> Error en la Subida</h3>
+                        <p><strong>Error:</strong> ${data.error || 'Error desconocido'}</p>
+                        ${data.output ? `<pre style="background: rgba(0,0,0,0.05); padding: 15px; border-radius: 8px; margin-top: 10px; overflow-x: auto; font-size: 0.85em;">${data.output}</pre>` : ''}
+                    `;
                 }
             } catch (error) {
                 resultadoDiv.className = 'result-box error';
-                resultadoDiv.innerHTML = `<h3><i class="fas fa-exclamation-circle"></i> Error</h3><p>${error.message}</p>`;
+                resultadoDiv.innerHTML = `
+                    <h3><i class="fas fa-exclamation-circle"></i> Error de Conexión</h3>
+                    <p><strong>Error:</strong> ${error.message}</p>
+                    <p style="margin-top: 10px;">Por favor verifique su conexión e intente nuevamente.</p>
+                `;
             }
         });
         
