@@ -35,7 +35,7 @@ if [ ! -f "models/flight_cluster_model.pkl" ]; then
         echo ""
         
         # Establecer límite de memoria para el entrenamiento (reducido para Railway)
-        export TRAINING_MAX_ROWS=${TRAINING_MAX_ROWS:-15000}
+        export TRAINING_MAX_ROWS=${TRAINING_MAX_ROWS:-8000}
         
         echo "Using TRAINING_MAX_ROWS=${TRAINING_MAX_ROWS}"
         

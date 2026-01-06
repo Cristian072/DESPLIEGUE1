@@ -16,18 +16,15 @@ def load_data(file_path, max_rows=None):
     # Limitar número de filas para evitar problemas de memoria en Railway
     # Railway tiene límites de memoria (típicamente 512MB-1GB), así que usamos una muestra
     if max_rows is None:
-        # Usar un límite conservador para Railway
-        max_rows = 20000  # Límite seguro para Railway
+        # Usar un límite conservador para Railway (memoria limitada)
+        max_rows = 8000  # Límite seguro para Railway (512MB-1GB de RAM)
     
     if max_rows:
         print(f"Limiting to {max_rows} rows for memory efficiency...")
-        # Usar muestreo aleatorio para mejor representatividad
-        df_full = pd.read_csv(file_path)
-        if len(df_full) > max_rows:
-            df = df_full.sample(n=max_rows, random_state=42)
-            print(f"Sampled {max_rows} rows from {len(df_full)} total rows")
-        else:
-            df = df_full
+        # Leer solo el límite de filas directamente para ahorrar memoria
+        # Esto evita cargar todo el archivo en memoria
+        df = pd.read_csv(file_path, nrows=max_rows)
+        print(f"Loaded {len(df)} rows (limited to {max_rows} for memory efficiency)")
     else:
         df = pd.read_csv(file_path)
     
@@ -134,13 +131,26 @@ def train_model(X, n_clusters=None):
     
     # Entrenar K-Means con parámetros optimizados para memoria
     # Reducir n_init y max_iter para ahorrar memoria en Railway
-    kmeans = KMeans(n_clusters=n_clusters, random_state=42, n_init=5, max_iter=100)
+    # Usar algoritmo 'elkan' que es más eficiente en memoria para datasets pequeños
+    kmeans = KMeans(
+        n_clusters=n_clusters, 
+        random_state=42, 
+        n_init=3,  # Reducido de 5 a 3 para ahorrar memoria
+        max_iter=100,
+        algorithm='lloyd'  # Usar algoritmo estándar que es más estable
+    )
     print("Fitting K-Means model (this may take a moment)...")
     kmeans.fit(X_scaled)
     
-    # Evaluar modelo
-    silhouette = silhouette_score(X_scaled, kmeans.labels_)
-    print(f"Silhouette Score: {silhouette:.4f}")
+    # Evaluar modelo (usar muestra si hay muchos datos para ahorrar memoria)
+    if X_scaled.shape[0] > 5000:
+        sample_size = min(5000, X_scaled.shape[0])
+        sample_indices = np.random.choice(X_scaled.shape[0], sample_size, replace=False)
+        silhouette = silhouette_score(X_scaled[sample_indices], kmeans.labels_[sample_indices])
+        print(f"Silhouette Score (estimated from {sample_size} samples): {silhouette:.4f}")
+    else:
+        silhouette = silhouette_score(X_scaled, kmeans.labels_)
+        print(f"Silhouette Score: {silhouette:.4f}")
     
     return kmeans, scaler, silhouette
 

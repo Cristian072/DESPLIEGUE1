@@ -647,7 +647,7 @@ def train_model():
             capture_output=True,
             text=True,
             timeout=600,
-            env={**os.environ, 'TRAINING_MAX_ROWS': '15000'}
+            env={**os.environ, 'TRAINING_MAX_ROWS': '8000'}
         )
         
         # Verificar que el modelo se creó correctamente
@@ -889,7 +889,7 @@ def upload_data():
                 capture_output=True,
                 text=True,
                 timeout=600,
-                env={**os.environ, 'TRAINING_MAX_ROWS': '15000'}
+                env={**os.environ, 'TRAINING_MAX_ROWS': '8000'}
             )
             
             retrain_success = retrain_result.returncode == 0 and os.path.exists('models/flight_cluster_model.pkl')
