@@ -192,7 +192,7 @@ def main():
         return
     
     # Entrenar modelo (usar None para encontrar k óptimo automáticamente)
-    model, scaler, score = train_model(X, n_clusters=100)
+    model, scaler, score = train_model(X, n_clusters=500)
     
     # Guardar modelo
     save_model(model, scaler, feature_cols)
