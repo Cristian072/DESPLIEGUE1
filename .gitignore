@@ -1,26 +1,17 @@
 # Python
 __pycache__/
 *.py[cod]
-*$py.class
-*.so
-.Python
-env/
+*.pyc
 venv/
+env/
 .venv/
-ENV/
-build/
-dist/
-*.egg-info/
 
-# Modelos (descomentar si NO quieres subirlos a Git)
+# Modelos (opcional - descomentar para NO subirlos)
 # models/*.pkl
-# !models/.gitkeep
 
 # IDE
 .vscode/
 .idea/
-*.swp
-*.swo
 
 # OS
 .DS_Store
@@ -29,6 +20,7 @@ Thumbs.db
 # Logs
 *.log
 
-# Datos (opcional - mantener privado)
-# *.xlsx
+# Datos grandes (no subir a Git)
+*.xlsx
+*.csv
 
