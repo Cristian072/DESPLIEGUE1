@@ -18,14 +18,8 @@ COPY models/ models/
 COPY entrypoint.sh ./
 RUN chmod +x entrypoint.sh
 
-# Copiar dataset (opcional - el archivo está en .gitignore)
-# Como el archivo CSV está en .gitignore, no estará disponible durante el build
-# El archivo se puede proporcionar de las siguientes formas:
-# 1. Como volumen en Railway (recomendado para archivos grandes)
-# 2. Descargándolo en runtime desde un almacenamiento externo
-# 3. O quitando *.csv del .gitignore y agregando solo este archivo específico
-# Por ahora, comentamos esta línea para que el build no falle
-# COPY ["DATA SET VUELOS - 10 000.csv", "./"]
+# Copiar dataset (el archivo está en el repositorio Git)
+COPY ["DATA SET VUELOS - 10 000.csv", "./"]
 
 # Exponer puerto
 EXPOSE 5000
