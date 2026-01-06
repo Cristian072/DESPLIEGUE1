@@ -20,5 +20,5 @@ EXPOSE 5000
 
 # Comando para ejecutar la aplicación
 # Railway proporciona la variable PORT automáticamente
-CMD ["sh", "-c", "gunicorn --bind 0.0.0.0:${PORT:-5000} --workers 2 --timeout 120 app:app"]
+CMD sh -c "gunicorn --bind 0.0.0.0:\${PORT:-5000} --workers 2 --timeout 120 app:app"
 
