@@ -12,10 +12,11 @@ COPY . .
 # Crear directorio para modelos
 RUN mkdir -p models
 
-# Exponer puerto (Railway usa variable PORT)
-EXPOSE $PORT
+# Exponer puerto (Railway usa variable PORT, por defecto 5000)
+EXPOSE 5000
 
 # Comando para ejecutar la aplicación
 # Railway proporciona la variable PORT automáticamente
-CMD gunicorn --bind 0.0.0.0:$PORT --workers 2 app:app
+# Usamos formato shell para que expanda la variable
+CMD sh -c "gunicorn --bind 0.0.0.0:${PORT:-5000} --workers 2 app:app"
 
