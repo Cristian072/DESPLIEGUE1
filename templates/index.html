@@ -1154,6 +1154,17 @@
                     loadingDiv.style.display = 'none';
                     contentDiv.style.display = 'block';
                     
+                    // Mostrar mensaje si no hay dataset
+                    if (!data.dataset_available) {
+                        const infoMsg = document.createElement('div');
+                        infoMsg.className = 'info-box';
+                        infoMsg.style.marginBottom = '20px';
+                        infoMsg.innerHTML = `
+                            <p><strong><i class="fas fa-info-circle"></i> Nota:</strong> ${data.note || 'El dataset no está disponible. Los tamaños de clusters se muestran como 0, pero los clusters y sus características se basan en los centroides del modelo entrenado.'}</p>
+                        `;
+                        contentDiv.insertBefore(infoMsg, contentDiv.firstChild);
+                    }
+                    
                     // Crear gráfico de barras
                     const ctx = document.getElementById('graficoClusters').getContext('2d');
                     if (graficoClusters) graficoClusters.destroy();
@@ -1355,46 +1366,38 @@
             const contentDiv = document.getElementById('contenidoEstadisticas');
             
             try {
-                // Verificar primero si el dataset existe
-                const healthResponse = await fetch('/health');
-                const healthData = await healthResponse.json();
-                
-                if (!healthData.data_available) {
-                    loadingDiv.innerHTML = `
-                        <div class="result-box error">
-                            <h3><i class="fas fa-exclamation-triangle"></i> Dataset No Encontrado</h3>
-                            <p>El archivo de datos no está disponible en el servidor.</p>
-                            <p style="margin-top: 10px;">Por favor asegúrese de que el archivo "DATA SET VUELOS - 10 000.csv" esté en el directorio del proyecto.</p>
-                        </div>
-                    `;
-                    return;
-                }
-                
-                if (!healthData.data_readable) {
-                    loadingDiv.innerHTML = `
-                        <div class="result-box error">
-                            <h3><i class="fas fa-exclamation-triangle"></i> Error al Leer Dataset</h3>
-                            <p>El archivo de datos existe pero no se puede leer correctamente.</p>
-                            <p style="margin-top: 10px;">Por favor verifique el formato del archivo CSV.</p>
-                        </div>
-                    `;
-                    return;
-                }
-                
                 const response = await fetch('/api/stats');
                 const data = await response.json();
                 
-                if (!response.ok) {
+                if (!data.dataset_available || data.error) {
                     loadingDiv.innerHTML = `
-                        <div class="result-box error">
-                            <h3><i class="fas fa-exclamation-circle"></i> Error al Cargar Estadísticas</h3>
-                            <p><strong>Error:</strong> ${data.error || 'Error desconocido'}</p>
+                        <div class="result-box" style="background: linear-gradient(135deg, #FFF3E0 0%, #FFE0B2 100%); border-left: 4px solid var(--advertencia);">
+                            <h3><i class="fas fa-info-circle"></i> Dataset No Disponible</h3>
+                            <p>${data.error || 'El archivo de datos no está disponible en el servidor.'}</p>
+                            ${data.model_info ? `
+                                <div style="margin-top: 20px; padding: 15px; background: white; border-radius: 8px;">
+                                    <h4 style="color: var(--azul-oscuro); margin-bottom: 10px;"><i class="fas fa-info-circle"></i> Información del Modelo:</h4>
+                                    <p><strong>Modelo Cargado:</strong> ${data.model_info.model_loaded ? '✓ Sí' : '✗ No'}</p>
+                                    <p><strong>Scaler Cargado:</strong> ${data.model_info.scaler_loaded ? '✓ Sí' : '✗ No'}</p>
+                                    <p><strong>Número de Clusters:</strong> ${data.model_info.n_clusters}</p>
+                                    <p style="margin-top: 15px; color: var(--gris-oscuro); font-size: 0.9em;">${data.model_info.note}</p>
+                                </div>
+                            ` : ''}
+                            <p style="margin-top: 15px;"><strong>Para ver estadísticas detalladas:</strong></p>
+                            <ol style="margin-left: 20px; margin-top: 10px; line-height: 1.8;">
+                                <li>Vaya a la pestaña "Mantenimiento"</li>
+                                <li>Suba el archivo CSV desde "Subir Nueva Data"</li>
+                                <li>Vuelva a esta pestaña para ver las estadísticas</li>
+                            </ol>
                         </div>
                     `;
+                    loadingDiv.style.display = 'block';
+                    contentDiv.style.display = 'none';
                     return;
                 }
                 
-                if (response.ok && data) {
+                // Si llegamos aquí, el dataset está disponible y tenemos datos
+                if (data && data.dataset_available) {
                     loadingDiv.style.display = 'none';
                     contentDiv.style.display = 'block';
                     

@@ -415,7 +415,9 @@ def get_clusters():
         # Preparar respuesta
         response_data = {
             'n_clusters': n_clusters,
-            'clusters': clusters_info
+            'clusters': clusters_info,
+            'dataset_available': os.path.exists(DATA_PATH),
+            'note': 'Los tamaños de clusters pueden ser 0 si el dataset no está disponible. Los clusters se muestran basados en los centroides del modelo.'
         }
         
         # Agregar feature_names si está disponible
@@ -433,6 +435,7 @@ def get_clusters():
             print(f"Error procesando feature_names: {str(fn_error)}")
             response_data['feature_names'] = []
         
+        print(f"Returning clusters data: {len(clusters_info)} clusters")
         return jsonify(response_data), 200
     
     except Exception as e:
@@ -509,7 +512,18 @@ def get_stats():
     """Obtener estadísticas del dataset"""
     try:
         if not os.path.exists(DATA_PATH):
-            return jsonify({'error': 'Dataset no encontrado'}), 404
+            # Si no hay dataset, devolver información del modelo en su lugar
+            model, scaler, feature_names, origin_encoder, dest_encoder = load_model()
+            return jsonify({
+                'error': 'Dataset no encontrado',
+                'dataset_available': False,
+                'model_info': {
+                    'model_loaded': model is not None,
+                    'scaler_loaded': scaler is not None,
+                    'n_clusters': model.n_clusters if model is not None else 0,
+                    'note': 'Suba el dataset CSV desde la sección Mantenimiento para ver estadísticas detalladas'
+                }
+            }), 200  # Devolver 200 en lugar de 404 para que el frontend pueda mostrar el mensaje
         
         df = pd.read_csv(DATA_PATH, nrows=10000)  # Limitar para performance
         
@@ -517,6 +531,7 @@ def get_stats():
         df['Fecha'] = pd.to_datetime(df['Fecha'], format='%d/%m/%Y', errors='coerce')
         
         stats = {
+            'dataset_available': True,
             'total_flights': len(df),
             'date_range': {
                 'start': df['Fecha'].min().strftime('%Y-%m-%d') if pd.notna(df['Fecha'].min()) else None,
@@ -546,7 +561,11 @@ def get_stats():
         return jsonify(stats)
     
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        import traceback
+        return jsonify({
+            'error': str(e),
+            'traceback': traceback.format_exc() if app.debug else None
+        }), 500
 
 @app.route('/api/query', methods=['POST'])
 def query_flights():
