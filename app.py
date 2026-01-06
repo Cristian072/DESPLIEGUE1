@@ -20,7 +20,8 @@ SCALER_PATH = 'models/scaler.pkl'
 FEATURES_PATH = 'models/feature_names.pkl'
 ORIGIN_ENCODER_PATH = 'models/origin_encoder.pkl'
 DEST_ENCODER_PATH = 'models/dest_encoder.pkl'
-DATA_PATH = 'DATA SET VUELOS - 70 000.csv'
+# El dataset puede estar en diferentes ubicaciones según el entorno
+DATA_PATH = os.environ.get('DATA_PATH', 'DATA SET VUELOS - 70 000.csv')
 
 def load_model():
     """Cargar modelo, scaler y encoders si existen"""
@@ -73,15 +74,22 @@ def index():
         return render_template('index.html')
     except Exception as e:
         # Si falla el template, mostrar página simple
+        import traceback
+        error_trace = traceback.format_exc()
+        print(f"Template error: {error_trace}")
         return f"""
         <html>
-        <head><title>Flight Clustering System</title></head>
-        <body>
-            <h1>Flight Clustering System</h1>
-            <p>Application is running!</p>
-            <p>Template error: {str(e)}</p>
-            <p><a href="/test">Test endpoint</a></p>
-            <p><a href="/health">Health check</a></p>
+        <head><title>Sistema de Clustering de Vuelos</title></head>
+        <body style="font-family: Arial, sans-serif; padding: 40px; background: linear-gradient(135deg, #003366 0%, #0066CC 100%); color: white; min-height: 100vh;">
+            <div style="max-width: 800px; margin: 0 auto; background: rgba(255,255,255,0.1); padding: 30px; border-radius: 10px;">
+                <h1>✈️ Sistema de Clustering de Vuelos</h1>
+                <p>✅ La aplicación está funcionando!</p>
+                <p>⚠️ Error al cargar el template: {str(e)}</p>
+                <p style="margin-top: 30px;">
+                    <a href="/health" style="color: #87CEEB; margin-right: 20px;">Health Check</a>
+                    <a href="/test" style="color: #87CEEB;">Test Endpoint</a>
+                </p>
+            </div>
         </body>
         </html>
         """, 200
