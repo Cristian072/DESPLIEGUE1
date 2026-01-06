@@ -22,7 +22,7 @@ FEATURES_PATH = 'models/feature_names.pkl'
 ORIGIN_ENCODER_PATH = 'models/origin_encoder.pkl'
 DEST_ENCODER_PATH = 'models/dest_encoder.pkl'
 # El dataset puede estar en diferentes ubicaciones según el entorno
-DATA_PATH = os.environ.get('DATA_PATH', 'DATA SET VUELOS - 70 000.csv')
+DATA_PATH = os.environ.get('DATA_PATH', 'DATA SET VUELOS - 10 000.csv')
 
 def load_model():
     """Cargar modelo, scaler y encoders si existen"""

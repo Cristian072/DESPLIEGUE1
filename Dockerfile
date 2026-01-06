@@ -24,7 +24,7 @@ RUN chmod +x entrypoint.sh
 # 2. Descargándolo en runtime desde un almacenamiento externo
 # 3. O quitando *.csv del .gitignore y agregando solo este archivo específico
 # Por ahora, comentamos esta línea para que el build no falle
-# COPY ["DATA SET VUELOS - 70 000.csv", "./"]
+# COPY ["DATA SET VUELOS - 10 000.csv", "./"]
 
 # Exponer puerto
 EXPOSE 5000

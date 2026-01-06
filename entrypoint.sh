@@ -13,7 +13,7 @@ echo "Python version: $(python --version)"
 echo ""
 
 # Verificar si el dataset existe
-if [ ! -f "DATA SET VUELOS - 70 000.csv" ]; then
+if [ ! -f "DATA SET VUELOS - 10 000.csv" ]; then
     echo "⚠️  WARNING: Dataset file not found!"
     echo "The dataset CSV file is not available."
     echo "The application will start, but model training will be skipped."
@@ -21,7 +21,7 @@ if [ ! -f "DATA SET VUELOS - 70 000.csv" ]; then
     echo ""
     DATASET_EXISTS=0
 else
-    echo "✅ Dataset file found: DATA SET VUELOS - 70 000.csv"
+    echo "✅ Dataset file found: DATA SET VUELOS - 10 000.csv"
     DATASET_EXISTS=1
     echo ""
 fi

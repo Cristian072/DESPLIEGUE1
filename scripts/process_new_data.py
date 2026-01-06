@@ -29,7 +29,7 @@ def validate_data(df):
     
     return True
 
-def process_new_data(new_data_path, main_data_path='DATA SET VUELOS - 70 000.csv'):
+def process_new_data(new_data_path, main_data_path='DATA SET VUELOS - 10 000.csv'):
     """Procesar nueva data y combinar con dataset principal"""
     print(f"Processing new data from: {new_data_path}")
     
@@ -91,7 +91,7 @@ def process_new_data(new_data_path, main_data_path='DATA SET VUELOS - 70 000.csv
 def main():
     parser = argparse.ArgumentParser(description='Process new flight data and merge with main dataset')
     parser.add_argument('--new-data', required=True, help='Path to new CSV file')
-    parser.add_argument('--main-data', default='DATA SET VUELOS - 70 000.csv', 
+    parser.add_argument('--main-data', default='DATA SET VUELOS - 10 000.csv', 
                        help='Path to main dataset CSV file')
     
     args = parser.parse_args()

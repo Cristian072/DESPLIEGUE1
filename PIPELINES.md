@@ -168,7 +168,7 @@ Si necesitas retrenar el modelo manualmente:
 
 Los backups se crean automáticamente con formato:
 ```
-DATA SET VUELOS - 70 000.csv.backup_YYYYMMDD_HHMMSS
+DATA SET VUELOS - 10 000.csv.backup_YYYYMMDD_HHMMSS
 ```
 
 Los backups se guardan en el mismo directorio que el dataset principal.

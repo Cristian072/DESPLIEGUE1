@@ -2,7 +2,7 @@
 
 ## ⚠️ IMPORTANTE: El Dataset CSV
 
-El archivo `DATA SET VUELOS - 70 000.csv` está en `.gitignore` (porque `*.csv` está ignorado), por lo que **NO se subirá a Git** y Railway no lo tendrá durante el build.
+El archivo `DATA SET VUELOS - 10 000.csv` está en `.gitignore` (porque `*.csv` está ignorado), por lo que **NO se subirá a Git** y Railway no lo tendrá durante el build.
 
 ## Soluciones para Proporcionar el Dataset
 
@@ -13,19 +13,19 @@ El archivo `DATA SET VUELOS - 70 000.csv` está en `.gitignore` (porque `*.csv` 
 # Datos grandes (no subir a Git)
 *.xlsx
 *.csv
-!DATA SET VUELOS - 70 000.csv  # Excepción para este archivo específico
+!DATA SET VUELOS - 10 000.csv  # Excepción para este archivo específico
 ```
 
 2. Agrega el archivo a Git:
 ```bash
-git add "DATA SET VUELOS - 70 000.csv"
+git add "DATA SET VUELOS - 10 000.csv"
 git commit -m "Add dataset file"
 git push
 ```
 
 3. Descomenta la línea COPY en el Dockerfile:
 ```dockerfile
-COPY ["DATA SET VUELOS - 70 000.csv", "./"]
+COPY ["DATA SET VUELOS - 10 000.csv", "./"]
 ```
 
 ### Opción 2: Usar Volumen en Railway (Recomendado para archivos grandes)
@@ -88,7 +88,7 @@ proyecto/
 ├── requirements.txt    # ✅ Dependencias
 ├── templates/         # ✅ Templates HTML
 ├── scripts/           # ✅ Scripts auxiliares
-└── DATA SET VUELOS - 70 000.csv  # ⚠️ Debe estar en Git o como volumen
+└── DATA SET VUELOS - 10 000.csv  # ⚠️ Debe estar en Git o como volumen
 ```
 
 ## Troubleshooting

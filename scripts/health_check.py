@@ -13,7 +13,7 @@ def check_model_files():
     checks = {
         'model_file': os.path.exists(model_path),
         'scaler_file': os.path.exists(scaler_path),
-        'data_file': os.path.exists('DATA SET VUELOS - 70 000.csv')
+        'data_file': os.path.exists('DATA SET VUELOS - 10 000.csv')
     }
     
     if checks['model_file']:

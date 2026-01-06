@@ -162,7 +162,7 @@ def save_model(model, scaler, feature_cols, output_dir='models'):
 
 def main():
     """Función principal"""
-    data_file = 'DATA SET VUELOS - 70 000.csv'
+    data_file = 'DATA SET VUELOS - 10 000.csv'
     
     if not os.path.exists(data_file):
         print(f"Error: File {data_file} not found!")
