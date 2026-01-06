@@ -1,26 +1,2 @@
-# Python
-__pycache__/
-*.py[cod]
-*.pyc
-venv/
-env/
-.venv/
-
-# Modelos (opcional - descomentar para NO subirlos)
-# models/*.pkl
-
-# IDE
-.vscode/
-.idea/
-
-# OS
-.DS_Store
-Thumbs.db
-
-# Logs
-*.log
-
-# Datos grandes (no subir a Git)
-*.xlsx
 
 
