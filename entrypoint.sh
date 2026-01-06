@@ -31,11 +31,31 @@ if [ ! -f "models/flight_cluster_model.pkl" ]; then
     if [ "$DATASET_EXISTS" -eq 1 ]; then
         echo "📊 Model not found. Attempting to train model..."
         echo "This may take a few minutes..."
-        if python train_model.py; then
+        echo "Note: Using limited data (20,000 rows) to avoid memory issues in Railway."
+        echo ""
+        
+        # Establecer límite de memoria para el entrenamiento (reducido para Railway)
+        export TRAINING_MAX_ROWS=${TRAINING_MAX_ROWS:-15000}
+        
+        echo "Using TRAINING_MAX_ROWS=${TRAINING_MAX_ROWS}"
+        
+        # Ejecutar entrenamiento con manejo de errores
+        # Nota: Railway puede matar el proceso si usa demasiada memoria
+        python train_model.py 2>&1
+        TRAIN_EXIT_CODE=$?
+        
+        if [ $TRAIN_EXIT_CODE -eq 0 ] && [ -f "models/flight_cluster_model.pkl" ]; then
             echo "✅ Model trained successfully!"
         else
-            echo "❌ Model training failed, but application will start anyway."
-            echo "You can retrain the model later via the web interface."
+            if [ $TRAIN_EXIT_CODE -ne 0 ]; then
+                echo "❌ Model training failed (exit code: $TRAIN_EXIT_CODE)."
+                echo "This is likely due to memory constraints in Railway."
+            else
+                echo "⚠️  Training completed but model file not found."
+                echo "This may be due to memory constraints. Application will start anyway."
+            fi
+            echo "Application will start anyway. You can retrain the model later via the web interface."
+            echo "Tip: Set TRAINING_MAX_ROWS environment variable to a lower value (current: ${TRAINING_MAX_ROWS})"
         fi
     else
         echo "⚠️  Cannot train model - dataset file not found!"

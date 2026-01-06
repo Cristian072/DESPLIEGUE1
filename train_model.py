@@ -10,10 +10,27 @@ import joblib
 import os
 from datetime import datetime
 
-def load_data(file_path):
+def load_data(file_path, max_rows=None):
     """Cargar datos del CSV"""
     print(f"Loading data from {file_path}...")
-    df = pd.read_csv(file_path)
+    # Limitar número de filas para evitar problemas de memoria en Railway
+    # Railway tiene límites de memoria (típicamente 512MB-1GB), así que usamos una muestra
+    if max_rows is None:
+        # Usar un límite conservador para Railway
+        max_rows = 20000  # Límite seguro para Railway
+    
+    if max_rows:
+        print(f"Limiting to {max_rows} rows for memory efficiency...")
+        # Usar muestreo aleatorio para mejor representatividad
+        df_full = pd.read_csv(file_path)
+        if len(df_full) > max_rows:
+            df = df_full.sample(n=max_rows, random_state=42)
+            print(f"Sampled {max_rows} rows from {len(df_full)} total rows")
+        else:
+            df = df_full
+    else:
+        df = pd.read_csv(file_path)
+    
     print(f"Data loaded: {df.shape[0]} rows, {df.shape[1]} columns")
     print(f"Columns: {df.columns.tolist()}")
     return df
@@ -80,13 +97,21 @@ def find_optimal_clusters(X_scaled, max_k=10):
     print("Finding optimal number of clusters...")
     inertias = []
     silhouette_scores = []
-    k_range = range(2, min(max_k + 1, X_scaled.shape[0] // 10))
+    # Reducir rango y usar menos inicializaciones para ahorrar memoria
+    k_range = range(2, min(max_k + 1, min(8, X_scaled.shape[0] // 10)))
     
     for k in k_range:
-        kmeans = KMeans(n_clusters=k, random_state=42, n_init=10)
+        # Usar menos inicializaciones para ahorrar memoria
+        kmeans = KMeans(n_clusters=k, random_state=42, n_init=5, max_iter=100)
         kmeans.fit(X_scaled)
         inertias.append(kmeans.inertia_)
-        silhouette_scores.append(silhouette_score(X_scaled, kmeans.labels_))
+        # Usar muestra para silhouette si hay muchos datos
+        if X_scaled.shape[0] > 10000:
+            sample_size = 10000
+            sample_indices = np.random.choice(X_scaled.shape[0], sample_size, replace=False)
+            silhouette_scores.append(silhouette_score(X_scaled[sample_indices], kmeans.labels_[sample_indices]))
+        else:
+            silhouette_scores.append(silhouette_score(X_scaled, kmeans.labels_))
         print(f"  k={k}: Silhouette={silhouette_scores[-1]:.4f}")
     
     # Elegir k con mejor silhouette score
@@ -107,8 +132,10 @@ def train_model(X, n_clusters=None):
     
     print(f"Training K-Means model with {n_clusters} clusters...")
     
-    # Entrenar K-Means
-    kmeans = KMeans(n_clusters=n_clusters, random_state=42, n_init=10)
+    # Entrenar K-Means con parámetros optimizados para memoria
+    # Reducir n_init y max_iter para ahorrar memoria en Railway
+    kmeans = KMeans(n_clusters=n_clusters, random_state=42, n_init=5, max_iter=100)
+    print("Fitting K-Means model (this may take a moment)...")
     kmeans.fit(X_scaled)
     
     # Evaluar modelo
@@ -141,8 +168,11 @@ def main():
         print(f"Error: File {data_file} not found!")
         return
     
-    # Cargar datos
-    df = load_data(data_file)
+    # Cargar datos con límite de memoria para Railway
+    # Usar máximo 20,000 filas para evitar problemas de memoria
+    max_rows = int(os.environ.get('TRAINING_MAX_ROWS', 20000))
+    print(f"Using max_rows={max_rows} for training (set TRAINING_MAX_ROWS env var to change)")
+    df = load_data(data_file, max_rows=max_rows)
     
     # Preprocesar
     X, feature_cols, df_processed = preprocess_data(df)

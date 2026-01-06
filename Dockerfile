@@ -17,11 +17,14 @@ RUN mkdir -p models
 COPY entrypoint.sh ./
 RUN chmod +x entrypoint.sh
 
-# Copiar dataset (el archivo debe existir en el contexto de build)
-# Si el archivo no existe localmente, puedes:
-# 1. Comentar esta línea y proporcionarlo como volumen en Railway
-# 2. O asegurarte de que el archivo esté en el mismo directorio que el Dockerfile
-COPY ["DATA SET VUELOS - 70 000.csv", "DATA SET VUELOS - 70 000.csv"]
+# Copiar dataset (opcional - el archivo está en .gitignore)
+# Como el archivo CSV está en .gitignore, no estará disponible durante el build
+# El archivo se puede proporcionar de las siguientes formas:
+# 1. Como volumen en Railway (recomendado para archivos grandes)
+# 2. Descargándolo en runtime desde un almacenamiento externo
+# 3. O quitando *.csv del .gitignore y agregando solo este archivo específico
+# Por ahora, comentamos esta línea para que el build no falle
+# COPY ["DATA SET VUELOS - 70 000.csv", "./"]
 
 # Exponer puerto
 EXPOSE 5000

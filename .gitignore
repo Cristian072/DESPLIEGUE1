@@ -22,5 +22,5 @@ Thumbs.db
 
 # Datos grandes (no subir a Git)
 *.xlsx
-*.csv
+
 
