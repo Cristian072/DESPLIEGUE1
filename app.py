@@ -290,44 +290,60 @@ def get_clusters():
 @app.route('/api/airports', methods=['GET'])
 def get_airports():
     """Obtener lista de aeropuertos disponibles"""
-    try:
-        if not os.path.exists(DATA_PATH):
-            # Devolver lista de aeropuertos comunes si el dataset no existe
-            default_airports = ['JFK', 'LAX', 'ORD', 'DFW', 'DEN', 'ATL', 'PHX', 'IAH', 'LAS', 'MIA', 
-                              'SEA', 'MSP', 'DTW', 'PHL', 'LGA', 'BOS', 'SFO', 'CLT', 'EWR', 'MCO',
-                              'SLC', 'BWI', 'DCA', 'MDW', 'HNL', 'AUS', 'PDX', 'STL', 'BNA', 'SAN']
-            return jsonify({
-                'airports': default_airports,
-                'origins': default_airports,
-                'destinations': default_airports,
-                'note': 'Dataset no encontrado, usando lista de aeropuertos por defecto'
-            })
-        
-        # Leer solo las columnas necesarias para ahorrar memoria
-        df = pd.read_csv(DATA_PATH, usecols=['Origen', 'Destino'], nrows=50000)
-        origins = sorted(df['Origen'].dropna().unique().tolist())
-        destinations = sorted(df['Destino'].dropna().unique().tolist())
-        all_airports = sorted(list(set(origins + destinations)))
-        
-        return jsonify({
-            'airports': all_airports,
-            'origins': origins,
-            'destinations': destinations
-        })
+    # Lista completa de aeropuertos por defecto (siempre disponible)
+    default_airports = [
+        'JFK', 'LAX', 'ORD', 'DFW', 'DEN', 'ATL', 'PHX', 'IAH', 'LAS', 'MIA',
+        'SEA', 'MSP', 'DTW', 'PHL', 'LGA', 'BOS', 'SFO', 'CLT', 'EWR', 'MCO',
+        'SLC', 'BWI', 'DCA', 'MDW', 'HNL', 'AUS', 'PDX', 'STL', 'BNA', 'SAN',
+        'IAH', 'FLL', 'IAD', 'TPA', 'OAK', 'SMF', 'SJC', 'RDU', 'MSY', 'MCI',
+        'CLE', 'IND', 'CMH', 'PIT', 'CVG', 'MEM', 'JAX', 'RSW', 'BUF', 'OGG'
+    ]
     
-    except Exception as e:
-        import traceback
-        print(f"Error en /api/airports: {str(e)}")
-        print(traceback.format_exc())
-        # Devolver lista por defecto en caso de error
-        default_airports = ['JFK', 'LAX', 'ORD', 'DFW', 'DEN', 'ATL', 'PHX', 'IAH', 'LAS', 'MIA']
+    try:
+        # Intentar leer del dataset si existe
+        if os.path.exists(DATA_PATH):
+            try:
+                # Leer solo las columnas necesarias para ahorrar memoria
+                df = pd.read_csv(DATA_PATH, usecols=['Origen', 'Destino'], nrows=50000)
+                origins = sorted(df['Origen'].dropna().unique().tolist())
+                destinations = sorted(df['Destino'].dropna().unique().tolist())
+                all_airports = sorted(list(set(origins + destinations)))
+                
+                # Si se encontraron aeropuertos válidos, usarlos
+                if len(all_airports) > 0:
+                    return jsonify({
+                        'airports': all_airports,
+                        'origins': origins,
+                        'destinations': destinations,
+                        'source': 'dataset'
+                    }), 200
+            except Exception as csv_error:
+                print(f"Error leyendo CSV en /api/airports: {str(csv_error)}")
+                # Continuar para usar lista por defecto
+        
+        # Si no hay dataset o falló la lectura, usar lista por defecto
         return jsonify({
             'airports': default_airports,
             'origins': default_airports,
             'destinations': default_airports,
+            'source': 'default',
+            'note': 'Dataset no disponible, usando lista de aeropuertos por defecto'
+        }), 200
+    
+    except Exception as e:
+        import traceback
+        error_trace = traceback.format_exc()
+        print(f"Error crítico en /api/airports: {str(e)}")
+        print(error_trace)
+        # SIEMPRE devolver lista por defecto, incluso en caso de error crítico
+        return jsonify({
+            'airports': default_airports,
+            'origins': default_airports,
+            'destinations': default_airports,
+            'source': 'default',
             'error': f'Error al cargar aeropuertos: {str(e)}',
             'note': 'Usando lista de aeropuertos por defecto'
-        })
+        }), 200  # Siempre devolver 200 para que el frontend pueda procesar la respuesta
 
 @app.route('/api/stats', methods=['GET'])
 def get_stats():

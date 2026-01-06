@@ -699,64 +699,118 @@
         let pestañaVizActual = 'overview';
         let aeropuertos = [];
         
+        // Lista de aeropuertos por defecto (fallback)
+        const defaultAirports = [
+            'JFK', 'LAX', 'ORD', 'DFW', 'DEN', 'ATL', 'PHX', 'IAH', 'LAS', 'MIA',
+            'SEA', 'MSP', 'DTW', 'PHL', 'LGA', 'BOS', 'SFO', 'CLT', 'EWR', 'MCO',
+            'SLC', 'BWI', 'DCA', 'MDW', 'HNL', 'AUS', 'PDX', 'STL', 'BNA', 'SAN'
+        ];
+        
+        // Función auxiliar para llenar selects
+        function llenarSelects(listaAeropuertos) {
+            if (!listaAeropuertos || listaAeropuertos.length === 0) {
+                console.warn('Lista de aeropuertos vacía, usando lista por defecto');
+                listaAeropuertos = defaultAirports;
+            }
+            
+            const selectOrigen = document.getElementById('origen');
+            const selectDestino = document.getElementById('destino');
+            const selectConsultaOrigen = document.getElementById('consulta_origen');
+            const selectConsultaDestino = document.getElementById('consulta_destino');
+            
+            if (!selectOrigen || !selectDestino || !selectConsultaOrigen || !selectConsultaDestino) {
+                console.error('No se encontraron los elementos select en el DOM');
+                return false;
+            }
+            
+            // Limpiar selects primero (excepto la primera opción)
+            [selectOrigen, selectDestino, selectConsultaOrigen, selectConsultaDestino].forEach(select => {
+                while (select.options.length > 1) {
+                    select.remove(1);
+                }
+            });
+            
+            // Agregar aeropuertos
+            listaAeropuertos.forEach(airport => {
+                if (airport && airport.trim() !== '') {
+                    const option1 = new Option(airport.trim(), airport.trim());
+                    const option2 = new Option(airport.trim(), airport.trim());
+                    const option3 = new Option(airport.trim(), airport.trim());
+                    const option4 = new Option(airport.trim(), airport.trim());
+                    
+                    selectOrigen.add(option1);
+                    selectDestino.add(option2);
+                    selectConsultaOrigen.add(option3);
+                    selectConsultaDestino.add(option4);
+                }
+            });
+            
+            // Valores por defecto
+            if (listaAeropuertos.includes('JFK')) {
+                selectOrigen.value = 'JFK';
+                if (listaAeropuertos.includes('LAX')) {
+                    selectDestino.value = 'LAX';
+                }
+            }
+            
+            console.log(`✅ ${listaAeropuertos.length} aeropuertos cargados correctamente`);
+            return true;
+        }
+        
         // Cargar aeropuertos al iniciar
         async function cargarAeropuertos() {
             try {
+                console.log('🔄 Cargando aeropuertos desde /api/airports...');
                 const response = await fetch('/api/airports');
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
                 const data = await response.json();
                 
-                // Siempre usar los aeropuertos, incluso si hay un error
-                aeropuertos = data.airports || [];
+                // Validar que la respuesta tenga aeropuertos
+                if (!data || !data.airports || !Array.isArray(data.airports)) {
+                    throw new Error('Respuesta inválida del servidor');
+                }
+                
+                aeropuertos = data.airports;
                 
                 if (aeropuertos.length === 0) {
-                    console.warn('No se encontraron aeropuertos, usando lista por defecto');
-                    aeropuertos = ['JFK', 'LAX', 'ORD', 'DFW', 'DEN', 'ATL', 'PHX', 'IAH', 'LAS', 'MIA'];
-                }
-                
-                // Llenar selects de origen y destino
-                const selectOrigen = document.getElementById('origen');
-                const selectDestino = document.getElementById('destino');
-                const selectConsultaOrigen = document.getElementById('consulta_origen');
-                const selectConsultaDestino = document.getElementById('consulta_destino');
-                
-                if (selectOrigen && selectDestino && selectConsultaOrigen && selectConsultaDestino) {
-                    aeropuertos.forEach(airport => {
-                        if (airport) {
-                            const option1 = new Option(airport, airport);
-                            const option2 = new Option(airport, airport);
-                            const option3 = new Option(airport, airport);
-                            const option4 = new Option(airport, airport);
-                            
-                            selectOrigen.add(option1);
-                            selectDestino.add(option2);
-                            selectConsultaOrigen.add(option3);
-                            selectConsultaDestino.add(option4);
-                        }
-                    });
-                    
-                    // Valores por defecto
-                    if (aeropuertos.includes('JFK')) {
-                        selectOrigen.value = 'JFK';
-                        if (aeropuertos.includes('LAX')) {
-                            selectDestino.value = 'LAX';
-                        }
-                    }
-                    
-                    console.log(`✅ ${aeropuertos.length} aeropuertos cargados`);
+                    console.warn('⚠️ No se encontraron aeropuertos en la respuesta, usando lista por defecto');
+                    aeropuertos = defaultAirports;
                 } else {
-                    console.error('No se encontraron los elementos select en el DOM');
+                    console.log(`✅ ${aeropuertos.length} aeropuertos recibidos del servidor`);
+                    if (data.note) {
+                        console.log(`ℹ️ ${data.note}`);
+                    }
                 }
+                
+                // Llenar los selects
+                if (!llenarSelects(aeropuertos)) {
+                    throw new Error('Error al llenar los selects');
+                }
+                
             } catch (error) {
-                console.error('Error cargando aeropuertos:', error);
+                console.error('❌ Error cargando aeropuertos:', error);
+                console.log('🔄 Usando lista de aeropuertos por defecto...');
+                
                 // Usar lista por defecto si falla
-                aeropuertos = ['JFK', 'LAX', 'ORD', 'DFW', 'DEN', 'ATL', 'PHX', 'IAH', 'LAS', 'MIA'];
-                const selectOrigen = document.getElementById('origen');
-                const selectDestino = document.getElementById('destino');
-                if (selectOrigen && selectDestino) {
-                    aeropuertos.forEach(airport => {
-                        selectOrigen.add(new Option(airport, airport));
-                        selectDestino.add(new Option(airport, airport));
-                    });
+                aeropuertos = defaultAirports;
+                llenarSelects(aeropuertos);
+                
+                // Mostrar mensaje al usuario si es necesario
+                const resultadoDiv = document.getElementById('resultadoPrediccion');
+                if (resultadoDiv) {
+                    resultadoDiv.style.display = 'block';
+                    resultadoDiv.className = 'result-box';
+                    resultadoDiv.innerHTML = `
+                        <p><i class="fas fa-info-circle"></i> <strong>Nota:</strong> Usando lista de aeropuertos por defecto. 
+                        Si el dataset está disponible, los aeropuertos se cargarán automáticamente.</p>
+                    `;
+                    setTimeout(() => {
+                        resultadoDiv.style.display = 'none';
+                    }, 5000);
                 }
             }
         }
