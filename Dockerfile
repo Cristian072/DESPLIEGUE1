@@ -17,8 +17,11 @@ RUN mkdir -p models
 COPY entrypoint.sh ./
 RUN chmod +x entrypoint.sh
 
-# Copiar dataset si existe (opcional, puede venir de volumen)
-COPY "DATA SET VUELOS - 70 000.csv" . 2>/dev/null || echo "Dataset will be provided at runtime"
+# Copiar dataset (el archivo debe existir en el contexto de build)
+# Si el archivo no existe localmente, puedes:
+# 1. Comentar esta línea y proporcionarlo como volumen en Railway
+# 2. O asegurarte de que el archivo esté en el mismo directorio que el Dockerfile
+COPY ["DATA SET VUELOS - 70 000.csv", "DATA SET VUELOS - 70 000.csv"]
 
 # Exponer puerto
 EXPOSE 5000
