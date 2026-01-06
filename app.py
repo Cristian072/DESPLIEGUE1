@@ -34,14 +34,10 @@ def load_model():
         print(f"Error loading model: {str(e)}", file=sys.stderr)
     return model, scaler
 
-# Cargar modelo al inicio (opcional, para verificar)
-print("Starting application...")
-print(f"Current directory: {os.getcwd()}")
-print(f"Files in current directory: {os.listdir('.')}")
-if os.path.exists('models'):
-    print(f"Files in models directory: {os.listdir('models')}")
-else:
-    print("Models directory does not exist")
+# Inicialización al importar (solo para logging)
+if __name__ != '__main__':
+    print("Flask app module loaded")
+    print(f"Current directory: {os.getcwd()}")
 
 @app.route('/')
 def index():
@@ -49,7 +45,19 @@ def index():
     try:
         return render_template('index.html')
     except Exception as e:
-        return f"Error loading template: {str(e)}", 500
+        # Si falla el template, mostrar página simple
+        return f"""
+        <html>
+        <head><title>Flight Clustering System</title></head>
+        <body>
+            <h1>Flight Clustering System</h1>
+            <p>Application is running!</p>
+            <p>Template error: {str(e)}</p>
+            <p><a href="/test">Test endpoint</a></p>
+            <p><a href="/health">Health check</a></p>
+        </body>
+        </html>
+        """, 200
 
 @app.route('/predict', methods=['POST'])
 def predict():

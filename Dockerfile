@@ -4,21 +4,24 @@ WORKDIR /app
 
 # Copiar requirements e instalar dependencias
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
 
 # Copiar código de la aplicación
-COPY . .
-
-# Crear directorio para modelos si no existe
+COPY app.py train_model.py ./
+COPY templates/ templates/
 RUN mkdir -p models
 
-# Hacer el script ejecutable
-RUN chmod +x start.sh || true
+# Copiar script de inicio
+COPY entrypoint.sh ./
+RUN chmod +x entrypoint.sh
 
-# Exponer puerto (Railway usa variable PORT, por defecto 5000)
+# Exponer puerto
 EXPOSE 5000
 
-# Comando para ejecutar la aplicación
-# Railway proporciona la variable PORT automáticamente
-CMD sh -c "gunicorn --bind 0.0.0.0:\${PORT:-5000} --workers 2 --timeout 120 app:app"
+# Variables de entorno
+ENV PYTHONUNBUFFERED=1
+
+# Usar script de inicio
+ENTRYPOINT ["./entrypoint.sh"]
 
