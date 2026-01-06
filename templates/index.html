@@ -3,7 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Flight Clustering Prediction System</title>
+    <title>Sistema de Clustering de Vuelos - Dashboard Aeroportuario</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.plot.ly/plotly-2.26.0.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
         * {
             margin: 0;
@@ -11,206 +15,1374 @@
             box-sizing: border-box;
         }
         
+        :root {
+            --azul-oscuro: #003366;
+            --azul-primario: #0066CC;
+            --azul-claro: #3399FF;
+            --celeste: #87CEEB;
+            --celeste-claro: #B0E0E6;
+            --blanco: #FFFFFF;
+            --gris-claro: #F5F7FA;
+            --gris-medio: #E1E8ED;
+            --gris-oscuro: #657786;
+            --exito: #00AA44;
+            --error: #CC0000;
+            --advertencia: #FF8800;
+        }
+        
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: 'Inter', 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, var(--azul-oscuro) 0%, var(--azul-primario) 50%, var(--celeste) 100%);
             min-height: 100vh;
-            padding: 20px;
+            padding: 0;
+            color: var(--azul-oscuro);
+            background-attachment: fixed;
+        }
+        
+        .header-main {
+            background: linear-gradient(135deg, var(--azul-oscuro) 0%, var(--azul-primario) 100%);
+            color: white;
+            padding: 30px 40px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            border-bottom: 4px solid var(--celeste);
+        }
+        
+        .header-main h1 {
+            font-size: 2.5em;
+            font-weight: 800;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .header-main .subtitle {
+            font-size: 1.1em;
+            opacity: 0.95;
+            font-weight: 400;
         }
         
         .container {
-            max-width: 800px;
+            max-width: 1600px;
             margin: 0 auto;
+            padding: 30px 20px;
+        }
+        
+        .nav-tabs {
             background: white;
-            border-radius: 20px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-            padding: 40px;
+            border-radius: 12px 12px 0 0;
+            padding: 0 20px;
+            display: flex;
+            gap: 5px;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+            overflow-x: auto;
         }
         
-        h1 {
-            color: #333;
-            text-align: center;
-            margin-bottom: 10px;
-            font-size: 2.5em;
-        }
-        
-        .subtitle {
-            text-align: center;
-            color: #666;
-            margin-bottom: 30px;
-            font-size: 1.1em;
-        }
-        
-        .form-group {
-            margin-bottom: 25px;
-        }
-        
-        label {
-            display: block;
-            margin-bottom: 8px;
-            color: #333;
-            font-weight: 600;
-            font-size: 1.1em;
-        }
-        
-        input {
-            width: 100%;
-            padding: 12px 15px;
-            border: 2px solid #e0e0e0;
-            border-radius: 10px;
-            font-size: 1em;
-            transition: border-color 0.3s;
-        }
-        
-        input:focus {
-            outline: none;
-            border-color: #667eea;
-        }
-        
-        button {
-            width: 100%;
-            padding: 15px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
+        .nav-tab {
+            padding: 18px 28px;
+            background: transparent;
             border: none;
-            border-radius: 10px;
-            font-size: 1.2em;
-            font-weight: 600;
+            border-bottom: 3px solid transparent;
             cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
+            font-size: 1em;
+            font-weight: 600;
+            color: var(--gris-oscuro);
+            transition: all 0.3s;
+            white-space: nowrap;
+            position: relative;
         }
         
-        button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        .nav-tab:hover {
+            color: var(--azul-primario);
+            background: var(--gris-claro);
         }
         
-        button:active {
-            transform: translateY(0);
+        .nav-tab.active {
+            color: var(--azul-primario);
+            border-bottom-color: var(--azul-primario);
+            background: var(--gris-claro);
         }
         
-        .result {
-            margin-top: 30px;
-            padding: 20px;
-            border-radius: 10px;
+        .nav-tab i {
+            margin-right: 8px;
+        }
+        
+        .tab-content {
             display: none;
+            background: white;
+            border-radius: 0 0 12px 12px;
+            padding: 40px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            min-height: 600px;
         }
         
-        .result.success {
-            background: #d4edda;
-            border: 2px solid #28a745;
-            color: #155724;
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.4s ease;
         }
         
-        .result.error {
-            background: #f8d7da;
-            border: 2px solid #dc3545;
-            color: #721c24;
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
         }
         
-        .result h3 {
-            margin-bottom: 10px;
+        .section-title {
+            font-size: 2em;
+            color: var(--azul-oscuro);
+            margin-bottom: 25px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding-bottom: 15px;
+            border-bottom: 3px solid var(--celeste-claro);
+        }
+        
+        .section-title i {
+            color: var(--azul-primario);
         }
         
         .info-box {
-            background: #e7f3ff;
-            border-left: 4px solid #2196F3;
-            padding: 15px;
-            margin-bottom: 25px;
-            border-radius: 5px;
+            background: linear-gradient(135deg, var(--celeste-claro) 0%, var(--celeste) 100%);
+            border-left: 5px solid var(--azul-primario);
+            padding: 20px 25px;
+            margin-bottom: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
         }
         
         .info-box p {
             margin: 5px 0;
-            color: #1976D2;
+            color: var(--azul-oscuro);
+            font-weight: 500;
+        }
+        
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+        
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .form-group label {
+            margin-bottom: 10px;
+            color: var(--azul-oscuro);
+            font-weight: 600;
+            font-size: 0.95em;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .form-group label i {
+            color: var(--azul-primario);
+            width: 20px;
+        }
+        
+        select, input[type="text"], input[type="number"], input[type="date"] {
+            padding: 14px 18px;
+            border: 2px solid var(--gris-medio);
+            border-radius: 8px;
+            font-size: 1em;
+            transition: all 0.3s;
+            background: white;
+            color: var(--azul-oscuro);
+            font-family: inherit;
+        }
+        
+        select:focus, input:focus {
+            outline: none;
+            border-color: var(--azul-primario);
+            box-shadow: 0 0 0 3px rgba(0, 102, 204, 0.1);
+        }
+        
+        select {
+            cursor: pointer;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%230066CC' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 15px center;
+            padding-right: 40px;
+        }
+        
+        .btn-primary {
+            padding: 16px 32px;
+            background: linear-gradient(135deg, var(--azul-primario) 0%, var(--azul-claro) 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            width: 100%;
+            box-shadow: 0 4px 15px rgba(0, 102, 204, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 102, 204, 0.4);
+        }
+        
+        .btn-primary:active {
+            transform: translateY(0);
+        }
+        
+        .result-box {
+            margin-top: 30px;
+            padding: 25px;
+            border-radius: 10px;
+            display: none;
+            animation: slideIn 0.3s ease;
+        }
+        
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(-20px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        
+        .result-box.success {
+            background: linear-gradient(135deg, #E8F5E9 0%, #C8E6C9 100%);
+            border: 2px solid var(--exito);
+            color: #2E7D32;
+        }
+        
+        .result-box.error {
+            background: linear-gradient(135deg, #FFEBEE 0%, #FFCDD2 100%);
+            border: 2px solid var(--error);
+            color: #C62828;
+        }
+        
+        .chart-container {
+            background: white;
+            border-radius: 10px;
+            padding: 25px;
+            margin: 25px 0;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            height: 450px;
+            position: relative;
+        }
+        
+        .chart-container-large {
+            height: 600px;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 25px;
+            margin-bottom: 35px;
+        }
+        
+        .stat-card {
+            background: linear-gradient(135deg, var(--azul-primario) 0%, var(--azul-claro) 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(0, 102, 204, 0.3);
+            transition: transform 0.3s;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .stat-card i {
+            font-size: 2.5em;
+            margin-bottom: 15px;
+            opacity: 0.9;
+        }
+        
+        .stat-card h3 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            font-weight: 800;
+        }
+        
+        .stat-card p {
+            font-size: 1em;
+            opacity: 0.95;
+            font-weight: 500;
+        }
+        
+        .cluster-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 25px;
+            margin-top: 30px;
+        }
+        
+        .cluster-card {
+            background: linear-gradient(135deg, white 0%, var(--gris-claro) 100%);
+            border: 2px solid var(--gris-medio);
+            border-radius: 12px;
+            padding: 28px;
+            transition: all 0.3s;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .cluster-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0, 102, 204, 0.2);
+            border-color: var(--azul-primario);
+        }
+        
+        .cluster-card h3 {
+            color: var(--azul-primario);
+            margin-bottom: 20px;
+            font-size: 1.6em;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .cluster-card p {
+            margin: 12px 0;
+            color: var(--azul-oscuro);
+            font-weight: 500;
+        }
+        
+        .cluster-card strong {
+            color: var(--azul-oscuro);
+        }
+        
+        .badge {
+            display: inline-block;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
+            margin-top: 15px;
+        }
+        
+        .badge-puntual { background: #E8F5E9; color: #2E7D32; }
+        .badge-retraso { background: #FFF3E0; color: #E65100; }
+        .badge-clima { background: #E3F2FD; color: #1565C0; }
+        .badge-alto-retraso { background: #FFEBEE; color: #C62828; }
+        
+        .query-results {
+            max-height: 600px;
+            overflow-y: auto;
+            margin-top: 25px;
+            padding-right: 10px;
+        }
+        
+        .query-results::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        .query-results::-webkit-scrollbar-track {
+            background: var(--gris-claro);
+            border-radius: 10px;
+        }
+        
+        .query-results::-webkit-scrollbar-thumb {
+            background: var(--azul-primario);
+            border-radius: 10px;
+        }
+        
+        .flight-item {
+            background: linear-gradient(135deg, white 0%, var(--gris-claro) 100%);
+            padding: 20px;
+            margin-bottom: 15px;
+            border-radius: 10px;
+            border-left: 5px solid var(--azul-primario);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            transition: all 0.2s;
+        }
+        
+        .flight-item:hover {
+            transform: translateX(5px);
+            box-shadow: 0 4px 15px rgba(0, 102, 204, 0.2);
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 50px;
+            color: var(--azul-primario);
+            font-size: 1.2em;
+            font-weight: 500;
+        }
+        
+        .loading::after {
+            content: '...';
+            animation: dots 1.5s steps(4, end) infinite;
+        }
+        
+        @keyframes dots {
+            0%, 20% { content: '.'; }
+            40% { content: '..'; }
+            60%, 100% { content: '...'; }
+        }
+        
+        .upload-area {
+            border: 3px dashed var(--azul-primario);
+            border-radius: 12px;
+            padding: 50px;
+            text-align: center;
+            background: linear-gradient(135deg, var(--gris-claro) 0%, white 100%);
+            margin: 25px 0;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .upload-area:hover {
+            border-color: var(--azul-claro);
+            background: linear-gradient(135deg, var(--celeste-claro) 0%, var(--gris-claro) 100%);
+        }
+        
+        .upload-area.dragover {
+            border-color: var(--exito);
+            background: linear-gradient(135deg, #E8F5E9 0%, #C8E6C9 100%);
+        }
+        
+        .upload-area i {
+            font-size: 4em;
+            color: var(--azul-primario);
+            margin-bottom: 20px;
+        }
+        
+        .viz-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 25px;
+            border-bottom: 2px solid var(--gris-medio);
+        }
+        
+        .viz-tab {
+            padding: 12px 24px;
+            background: transparent;
+            border: none;
+            border-bottom: 3px solid transparent;
+            cursor: pointer;
+            font-weight: 600;
+            color: var(--gris-oscuro);
+            transition: all 0.2s;
+            font-size: 1em;
+        }
+        
+        .viz-tab:hover {
+            color: var(--azul-primario);
+            background: var(--gris-claro);
+        }
+        
+        .viz-tab.active {
+            color: var(--azul-primario);
+            border-bottom-color: var(--azul-primario);
         }
     </style>
 </head>
 <body>
+    <div class="header-main">
+        <h1><i class="fas fa-plane-departure"></i> Sistema de Clustering de Vuelos</h1>
+        <p class="subtitle">Dashboard Aeroportuario - Aprendizaje No Supervisado</p>
+    </div>
+    
     <div class="container">
-        <h1>✈️ Flight Clustering System</h1>
-        <p class="subtitle">Unsupervised Learning Model for Flight Data Analysis</p>
-        
-        <div class="info-box">
-            <p><strong>Instructions:</strong></p>
-            <p>Enter flight characteristics to predict which cluster it belongs to.</p>
-            <p>The model uses K-Means clustering to group similar flights.</p>
+        <div class="nav-tabs">
+            <button class="nav-tab active" onclick="mostrarTab('prediccion')">
+                <i class="fas fa-search"></i> Predicción
+            </button>
+            <button class="nav-tab" onclick="mostrarTab('clusters')">
+                <i class="fas fa-project-diagram"></i> Clusters
+            </button>
+            <button class="nav-tab" onclick="mostrarTab('consulta')">
+                <i class="fas fa-list"></i> Consulta de Vuelos
+            </button>
+            <button class="nav-tab" onclick="mostrarTab('estadisticas')">
+                <i class="fas fa-chart-bar"></i> Estadísticas
+            </button>
+            <button class="nav-tab" onclick="mostrarTab('mantenimiento')">
+                <i class="fas fa-cogs"></i> Mantenimiento
+            </button>
         </div>
         
-        <form id="predictionForm">
-            <div class="form-group">
-                <label for="duration">Duration (hours)</label>
-                <input type="number" id="duration" name="duration" step="0.1" placeholder="e.g., 2.5" required>
+        <!-- Tab Predicción -->
+        <div id="prediccion" class="tab-content active">
+            <h2 class="section-title"><i class="fas fa-search"></i> Predicción de Cluster</h2>
+            <div class="info-box">
+                <p><strong><i class="fas fa-info-circle"></i> Instrucciones:</strong> Complete los datos del vuelo para predecir a qué cluster pertenece.</p>
+                <p>El modelo utiliza aprendizaje no supervisado (K-Means) para agrupar vuelos según patrones de retrasos.</p>
             </div>
             
-            <div class="form-group">
-                <label for="distance">Distance (km)</label>
-                <input type="number" id="distance" name="distance" step="0.1" placeholder="e.g., 1500" required>
-            </div>
+            <form id="formPrediccion">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label><i class="fas fa-plane-departure"></i> Aeropuerto de Origen</label>
+                        <select id="origen" name="origen" required>
+                            <option value="">Seleccione origen...</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label><i class="fas fa-plane-arrival"></i> Aeropuerto de Destino</label>
+                        <select id="destino" name="destino" required>
+                            <option value="">Seleccione destino...</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label><i class="fas fa-calendar-alt"></i> Fecha</label>
+                        <input type="text" id="fecha" name="fecha" placeholder="DD/MM/YYYY" value="08/01/2018" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label><i class="fas fa-clock"></i> Hora de Salida</label>
+                        <input type="number" id="hora_salida" name="hora_salida" placeholder="Ej: 1200" value="1200" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label><i class="fas fa-clock"></i> Hora de Llegada</label>
+                        <input type="number" id="hora_llegada" name="hora_llegada" placeholder="Ej: 1500" value="1500" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label><i class="fas fa-exclamation-triangle"></i> Retraso Salida (min)</label>
+                        <input type="number" id="retraso_salida" name="retraso_salida" placeholder="Ej: 10" value="0" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label><i class="fas fa-exclamation-triangle"></i> Retraso Llegada (min)</label>
+                        <input type="number" id="retraso_llegada" name="retraso_llegada" placeholder="Ej: 15" value="0" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label><i class="fas fa-cloud-rain"></i> Retraso Clima (min)</label>
+                        <input type="number" id="retraso_clima" name="retraso_clima" placeholder="Ej: 0" value="0" required>
+                    </div>
+                </div>
+                
+                <button type="submit" class="btn-primary">
+                    <i class="fas fa-rocket"></i> Predecir Cluster
+                </button>
+            </form>
             
-            <div class="form-group">
-                <label for="price">Price (currency)</label>
-                <input type="number" id="price" name="price" step="0.1" placeholder="e.g., 250" required>
-            </div>
-            
-            <button type="submit">Predict Cluster</button>
-        </form>
+            <div id="resultadoPrediccion" class="result-box"></div>
+        </div>
         
-        <div id="result" class="result"></div>
+        <!-- Tab Clusters -->
+        <div id="clusters" class="tab-content">
+            <h2 class="section-title"><i class="fas fa-project-diagram"></i> Visualización de Clusters</h2>
+            
+            <div id="cargandoClusters" class="loading">Cargando datos de clusters</div>
+            <div id="contenidoClusters" style="display: none;">
+                <div class="viz-tabs">
+                    <button class="viz-tab active" onclick="mostrarViz('overview')">Resumen</button>
+                    <button class="viz-tab" onclick="mostrarViz('2d')">Visualización 2D</button>
+                    <button class="viz-tab" onclick="mostrarViz('detalles')">Detalles</button>
+                </div>
+                <div id="overview-viz">
+                    <div class="chart-container">
+                        <canvas id="graficoClusters"></canvas>
+                    </div>
+                </div>
+                
+                <div id="2d-viz" style="display: none;">
+                    <div class="chart-container chart-container-large">
+                        <div id="grafico2D"></div>
+                    </div>
+                </div>
+                
+                <div id="detalles-viz" style="display: none;">
+                    <div class="cluster-grid" id="tarjetasClusters"></div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Tab Consulta -->
+        <div id="consulta" class="tab-content">
+            <h2 class="section-title"><i class="fas fa-list"></i> Consulta de Vuelos</h2>
+            <form id="formConsulta">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label><i class="fas fa-plane-departure"></i> Aeropuerto de Origen</label>
+                        <select id="consulta_origen" name="origen">
+                            <option value="">Todos los orígenes</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label><i class="fas fa-plane-arrival"></i> Aeropuerto de Destino</label>
+                        <select id="consulta_destino" name="destino">
+                            <option value="">Todos los destinos</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label><i class="fas fa-arrow-down"></i> Retraso Mínimo (min)</label>
+                        <input type="number" id="min_delay" name="min_delay" placeholder="Ej: 0">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label><i class="fas fa-arrow-up"></i> Retraso Máximo (min)</label>
+                        <input type="number" id="max_delay" name="max_delay" placeholder="Ej: 100">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label><i class="fas fa-list"></i> Límite de Resultados</label>
+                        <input type="number" id="limit" name="limit" value="50" min="1" max="500">
+                    </div>
+                </div>
+                
+                <button type="submit" class="btn-primary">
+                    <i class="fas fa-search"></i> Buscar Vuelos
+                </button>
+            </form>
+            
+            <div id="resultadosConsulta" class="query-results"></div>
+        </div>
+        
+        <!-- Tab Estadísticas -->
+        <div id="estadisticas" class="tab-content">
+            <h2 class="section-title"><i class="fas fa-chart-bar"></i> Estadísticas del Dataset</h2>
+            <div id="cargandoEstadisticas" class="loading">Cargando estadísticas</div>
+            <div id="contenidoEstadisticas" style="display: none;">
+                <div class="stats-grid" id="gridEstadisticas"></div>
+                <div class="chart-container">
+                    <canvas id="graficoEstadisticas"></canvas>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Tab Mantenimiento -->
+        <div id="mantenimiento" class="tab-content">
+            <h2 class="section-title"><i class="fas fa-cogs"></i> Mantenimiento y CI/CD</h2>
+            <div class="info-box">
+                <p><strong><i class="fas fa-info-circle"></i> Información del Pipeline:</strong></p>
+                <p>Este sistema soporta retrenamiento automático del modelo cuando hay nueva data disponible.</p>
+                <p>Suba un archivo CSV con nueva data para combinarla automáticamente con el dataset existente y retrenar el modelo.</p>
+                <p>El pipeline CI/CD está configurado mediante GitHub Actions para despliegues automatizados.</p>
+            </div>
+            
+            <div style="margin-top: 30px;">
+                <h3 style="margin-bottom: 20px; color: var(--azul-oscuro);"><i class="fas fa-upload"></i> Subir Nueva Data</h3>
+                <div class="upload-area" id="areaUpload" onclick="document.getElementById('inputArchivo').click()">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                    <p style="font-size: 1.3em; font-weight: 600; color: var(--azul-oscuro); margin-top: 15px;">Haga clic para subir o arrastre y suelte</p>
+                    <p style="color: var(--gris-oscuro); margin-top: 10px;">Solo archivos CSV</p>
+                    <input type="file" id="inputArchivo" accept=".csv" style="display: none;">
+                </div>
+                <div id="resultadoUpload" class="result-box" style="margin-top: 20px;"></div>
+            </div>
+            
+            <div style="margin-top: 40px;">
+                <h3 style="margin-bottom: 20px; color: var(--azul-oscuro);"><i class="fas fa-sync-alt"></i> Retrenamiento Manual</h3>
+                <button class="btn-primary" onclick="retrenarModelo()">
+                    <i class="fas fa-sync-alt"></i> Retrenar Modelo
+                </button>
+                <div id="resultadoRetrenamiento" class="result-box" style="margin-top: 20px;"></div>
+            </div>
+            
+            <div style="margin-top: 40px;">
+                <h3 style="margin-bottom: 20px; color: var(--azul-oscuro);"><i class="fas fa-heartbeat"></i> Verificación del Sistema</h3>
+                <button class="btn-primary" onclick="verificarSalud()">
+                    <i class="fas fa-heartbeat"></i> Verificar Estado del Sistema
+                </button>
+                <div id="resultadoSalud" class="result-box" style="margin-top: 20px;"></div>
+            </div>
+        </div>
     </div>
     
     <script>
-        document.getElementById('predictionForm').addEventListener('submit', async (e) => {
+        let graficoClusters = null;
+        let graficoEstadisticas = null;
+        let pestañaVizActual = 'overview';
+        let aeropuertos = [];
+        
+        // Cargar aeropuertos al iniciar
+        async function cargarAeropuertos() {
+            try {
+                const response = await fetch('/api/airports');
+                const data = await response.json();
+                if (response.ok) {
+                    aeropuertos = data.airports || [];
+                    
+                    // Llenar selects de origen y destino
+                    const selectOrigen = document.getElementById('origen');
+                    const selectDestino = document.getElementById('destino');
+                    const selectConsultaOrigen = document.getElementById('consulta_origen');
+                    const selectConsultaDestino = document.getElementById('consulta_destino');
+                    
+                    aeropuertos.forEach(airport => {
+                        const option1 = new Option(airport, airport);
+                        const option2 = new Option(airport, airport);
+                        const option3 = new Option(airport, airport);
+                        const option4 = new Option(airport, airport);
+                        
+                        selectOrigen.add(option1);
+                        selectDestino.add(option2);
+                        selectConsultaOrigen.add(option3);
+                        selectConsultaDestino.add(option4);
+                    });
+                    
+                    // Valores por defecto
+                    if (aeropuertos.includes('JFK')) {
+                        selectOrigen.value = 'JFK';
+                        selectDestino.value = 'LAX';
+                    }
+                }
+            } catch (error) {
+                console.error('Error cargando aeropuertos:', error);
+            }
+        }
+        
+        function mostrarTab(nombreTab) {
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelectorAll('.nav-tab').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            document.getElementById(nombreTab).classList.add('active');
+            event.target.classList.add('active');
+            
+            if (nombreTab === 'clusters') {
+                cargarClusters();
+            } else if (nombreTab === 'estadisticas') {
+                cargarEstadisticas();
+            }
+        }
+        
+        function mostrarViz(tipoViz) {
+            pestañaVizActual = tipoViz;
+            document.querySelectorAll('.viz-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            document.getElementById('overview-viz').style.display = tipoViz === 'overview' ? 'block' : 'none';
+            document.getElementById('2d-viz').style.display = tipoViz === '2d' ? 'block' : 'none';
+            document.getElementById('detalles-viz').style.display = tipoViz === 'detalles' ? 'block' : 'none';
+            
+            if (tipoViz === '2d') {
+                cargarVisualizacion2D();
+            }
+        }
+        
+        // Formulario de predicción
+        document.getElementById('formPrediccion').addEventListener('submit', async (e) => {
             e.preventDefault();
             
-            const duration = document.getElementById('duration').value;
-            const distance = document.getElementById('distance').value;
-            const price = document.getElementById('price').value;
+            const formData = {
+                origen: document.getElementById('origen').value,
+                destino: document.getElementById('destino').value,
+                fecha: document.getElementById('fecha').value,
+                hora_salida: parseInt(document.getElementById('hora_salida').value),
+                hora_llegada: parseInt(document.getElementById('hora_llegada').value),
+                retraso_salida: parseFloat(document.getElementById('retraso_salida').value),
+                retraso_llegada: parseFloat(document.getElementById('retraso_llegada').value),
+                retraso_clima: parseFloat(document.getElementById('retraso_clima').value)
+            };
             
-            const resultDiv = document.getElementById('result');
-            resultDiv.style.display = 'none';
+            const resultadoDiv = document.getElementById('resultadoPrediccion');
+            resultadoDiv.style.display = 'none';
             
             try {
                 const response = await fetch('/predict', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        duration: parseFloat(duration),
-                        distance: parseFloat(distance),
-                        price: parseFloat(price)
-                    })
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(formData)
                 });
                 
                 const data = await response.json();
                 
                 if (response.ok) {
-                    resultDiv.className = 'result success';
-                    resultDiv.innerHTML = `
-                        <h3>✅ Prediction Result</h3>
-                        <p><strong>Cluster:</strong> ${data.cluster}</p>
+                    resultadoDiv.className = 'result-box success';
+                    resultadoDiv.innerHTML = `
+                        <h3 style="margin-bottom: 15px;"><i class="fas fa-check-circle"></i> Resultado de la Predicción</h3>
+                        <p style="font-size: 1.3em; margin: 15px 0;"><strong>Cluster:</strong> <span style="font-size: 1.8em; color: var(--azul-primario); font-weight: 800;">${data.cluster}</span></p>
+                        <p><strong>Distancia al Centroide:</strong> ${data.distance_to_centroid.toFixed(4)}</p>
                         <p>${data.message}</p>
                     `;
                 } else {
-                    resultDiv.className = 'result error';
-                    resultDiv.innerHTML = `
-                        <h3>❌ Error</h3>
-                        <p>${data.error}</p>
-                    `;
+                    resultadoDiv.className = 'result-box error';
+                    resultadoDiv.innerHTML = `<h3><i class="fas fa-exclamation-circle"></i> Error</h3><p>${data.error}</p>`;
                 }
                 
-                resultDiv.style.display = 'block';
+                resultadoDiv.style.display = 'block';
             } catch (error) {
-                resultDiv.className = 'result error';
-                resultDiv.innerHTML = `
-                    <h3>❌ Error</h3>
-                    <p>Failed to connect to server: ${error.message}</p>
+                resultadoDiv.className = 'result-box error';
+                resultadoDiv.innerHTML = `<h3><i class="fas fa-exclamation-circle"></i> Error</h3><p>Error de conexión: ${error.message}</p>`;
+                resultadoDiv.style.display = 'block';
+            }
+        });
+        
+        // Cargar clusters
+        async function cargarClusters() {
+            const loadingDiv = document.getElementById('cargandoClusters');
+            const contentDiv = document.getElementById('contenidoClusters');
+            
+            try {
+                // Primero verificar el estado del sistema
+                const healthResponse = await fetch('/health');
+                const healthData = await healthResponse.json();
+                
+                if (!healthData.model_loaded) {
+                    loadingDiv.innerHTML = `
+                        <div class="result-box error">
+                            <h3><i class="fas fa-exclamation-triangle"></i> Modelo No Encontrado</h3>
+                            <p>El modelo no está entrenado. Por favor:</p>
+                            <ol style="margin-left: 20px; margin-top: 10px;">
+                                <li>Vaya a la pestaña "Mantenimiento"</li>
+                                <li>Haga clic en "Retrenar Modelo"</li>
+                                <li>Espere a que termine el entrenamiento</li>
+                                <li>Vuelva a esta pestaña</li>
+                            </ol>
+                            <button class="btn-primary" onclick="retrenarModelo()" style="margin-top: 15px;">
+                                <i class="fas fa-sync-alt"></i> Entrenar Modelo Ahora
+                            </button>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                const response = await fetch('/api/clusters');
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    loadingDiv.innerHTML = `
+                        <div class="result-box error">
+                            <h3><i class="fas fa-exclamation-circle"></i> Error al Cargar Clusters</h3>
+                            <p><strong>Error:</strong> ${data.error || 'Error desconocido'}</p>
+                            ${!healthData.data_available ? '<p style="margin-top: 10px;"><strong>Nota:</strong> El dataset no está disponible.</p>' : ''}
+                        </div>
+                    `;
+                    return;
+                }
+                
+                if (data.clusters && data.clusters.length > 0) {
+                    loadingDiv.style.display = 'none';
+                    contentDiv.style.display = 'block';
+                    
+                    // Crear gráfico de barras
+                    const ctx = document.getElementById('graficoClusters').getContext('2d');
+                    if (graficoClusters) graficoClusters.destroy();
+                    
+                    const colores = [
+                        'rgba(0, 102, 204, 0.8)',
+                        'rgba(51, 153, 255, 0.8)',
+                        'rgba(135, 206, 235, 0.8)',
+                        'rgba(0, 51, 102, 0.8)',
+                        'rgba(176, 224, 230, 0.8)',
+                        'rgba(0, 102, 204, 0.6)',
+                        'rgba(51, 153, 255, 0.6)'
+                    ];
+                    
+                    graficoClusters = new Chart(ctx, {
+                        type: 'bar',
+                        data: {
+                            labels: data.clusters.map(c => `Cluster ${c.cluster}`),
+                            datasets: [{
+                                label: 'Número de Vuelos',
+                                data: data.clusters.map(c => c.size),
+                                backgroundColor: colores.slice(0, data.clusters.length),
+                                borderColor: colores.slice(0, data.clusters.length).map(c => c.replace('0.8', '1')),
+                                borderWidth: 2
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                title: {
+                                    display: true,
+                                    text: 'Distribución de Clusters',
+                                    font: { size: 18, weight: 'bold' },
+                                    color: '#003366'
+                                },
+                                legend: {
+                                    display: false
+                                }
+                            },
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    ticks: {
+                                        precision: 0,
+                                        color: '#003366'
+                                    },
+                                    grid: {
+                                        color: 'rgba(0, 0, 0, 0.05)'
+                                    }
+                                },
+                                x: {
+                                    ticks: {
+                                        color: '#003366'
+                                    },
+                                    grid: {
+                                        display: false
+                                    }
+                                }
+                            }
+                        }
+                    });
+                    
+                    // Crear tarjetas de clusters
+                    const tarjetasDiv = document.getElementById('tarjetasClusters');
+                    tarjetasDiv.innerHTML = data.clusters.map(c => {
+                        const chars = c.characteristics || {};
+                        const badgeClass = chars.cluster_type === 'On Time' ? 'badge-puntual' :
+                                         chars.cluster_type === 'Weather Affected' ? 'badge-clima' :
+                                         chars.cluster_type === 'High Delay' ? 'badge-alto-retraso' : 'badge-retraso';
+                        
+                        const tipoTexto = chars.cluster_type === 'On Time' ? 'Puntual' :
+                                         chars.cluster_type === 'Weather Affected' ? 'Afectado por Clima' :
+                                         chars.cluster_type === 'High Delay' ? 'Alto Retraso' : 'Retraso Moderado';
+                        
+                        return `
+                            <div class="cluster-card">
+                                <h3><i class="fas fa-layer-group"></i> Cluster ${c.cluster}</h3>
+                                <p><strong><i class="fas fa-plane"></i> Tamaño:</strong> ${c.size.toLocaleString()} vuelos</p>
+                                <p><strong><i class="fas fa-clock"></i> Retraso Salida Promedio:</strong> ${chars.avg_departure_delay?.toFixed(2) || 'N/A'} min</p>
+                                <p><strong><i class="fas fa-clock"></i> Retraso Llegada Promedio:</strong> ${chars.avg_arrival_delay?.toFixed(2) || 'N/A'} min</p>
+                                <p><strong><i class="fas fa-cloud-rain"></i> Retraso Clima Promedio:</strong> ${chars.avg_weather_delay?.toFixed(2) || 'N/A'} min</p>
+                                <span class="badge ${badgeClass}">${tipoTexto}</span>
+                            </div>
+                        `;
+                    }).join('');
+                } else {
+                    loadingDiv.innerHTML = `
+                        <div class="result-box error">
+                            <h3><i class="fas fa-exclamation-triangle"></i> No Se Encontraron Clusters</h3>
+                            <p>El modelo no tiene clusters definidos. Por favor entrene el modelo primero.</p>
+                            <button class="btn-primary" onclick="retrenarModelo()" style="margin-top: 15px;">
+                                <i class="fas fa-sync-alt"></i> Entrenar Modelo
+                            </button>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                loadingDiv.innerHTML = `
+                    <div class="result-box error">
+                        <h3><i class="fas fa-exclamation-circle"></i> Error de Conexión</h3>
+                        <p><strong>Error:</strong> ${error.message}</p>
+                        <p style="margin-top: 10px;">Por favor verifique que el servidor esté funcionando correctamente.</p>
+                    </div>
                 `;
-                resultDiv.style.display = 'block';
+            }
+        }
+        
+        // Cargar visualización 2D
+        async function cargarVisualizacion2D() {
+            try {
+                const response = await fetch('/api/cluster-visualization');
+                const data = await response.json();
+                
+                if (response.ok && data.points && data.points.length > 0) {
+                    const traces = [];
+                    const colores = [
+                        '#0066CC', '#3399FF', '#87CEEB', '#003366', '#B0E0E6',
+                        '#4A90E2', '#5BA3F5'
+                    ];
+                    
+                    const clusters = {};
+                    data.points.forEach(point => {
+                        if (!clusters[point.cluster]) {
+                            clusters[point.cluster] = [];
+                        }
+                        clusters[point.cluster].push(point);
+                    });
+                    
+                    Object.keys(clusters).forEach(clusterId => {
+                        const puntosCluster = clusters[clusterId];
+                        traces.push({
+                            x: puntosCluster.map(p => p.x),
+                            y: puntosCluster.map(p => p.y),
+                            mode: 'markers',
+                            type: 'scatter',
+                            name: `Cluster ${clusterId}`,
+                            marker: {
+                                size: 6,
+                                color: colores[parseInt(clusterId) % colores.length],
+                                opacity: 0.6
+                            },
+                            text: puntosCluster.map(p => 
+                                `Ruta: ${p.origin} → ${p.destination}<br>` +
+                                `Retraso Salida: ${p.departure_delay} min<br>` +
+                                `Retraso Llegada: ${p.arrival_delay} min`
+                            ),
+                            hoverinfo: 'text'
+                        });
+                    });
+                    
+                    data.centroids_2d.forEach(centroid => {
+                        traces.push({
+                            x: [centroid.x],
+                            y: [centroid.y],
+                            mode: 'markers',
+                            type: 'scatter',
+                            name: `Centroide ${centroid.cluster}`,
+                            marker: {
+                                size: 15,
+                                color: colores[centroid.cluster % colores.length],
+                                symbol: 'x',
+                                line: { width: 2 }
+                            }
+                        });
+                    });
+                    
+                    Plotly.newPlot('grafico2D', traces, {
+                        title: 'Visualización 2D de Clusters (PCA)',
+                        xaxis: { title: 'Primera Componente Principal' },
+                        yaxis: { title: 'Segunda Componente Principal' },
+                        hovermode: 'closest',
+                        font: { family: 'Inter', color: '#003366' }
+                    }, { responsive: true });
+                }
+            } catch (error) {
+                console.error('Error cargando visualización 2D:', error);
+            }
+        }
+        
+        // Cargar estadísticas
+        async function cargarEstadisticas() {
+            const loadingDiv = document.getElementById('cargandoEstadisticas');
+            const contentDiv = document.getElementById('contenidoEstadisticas');
+            
+            try {
+                // Verificar primero si el dataset existe
+                const healthResponse = await fetch('/health');
+                const healthData = await healthResponse.json();
+                
+                if (!healthData.data_available) {
+                    loadingDiv.innerHTML = `
+                        <div class="result-box error">
+                            <h3><i class="fas fa-exclamation-triangle"></i> Dataset No Encontrado</h3>
+                            <p>El archivo de datos no está disponible en el servidor.</p>
+                            <p style="margin-top: 10px;">Por favor asegúrese de que el archivo "DATA SET VUELOS - 70 000.csv" esté en el directorio del proyecto.</p>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                if (!healthData.data_readable) {
+                    loadingDiv.innerHTML = `
+                        <div class="result-box error">
+                            <h3><i class="fas fa-exclamation-triangle"></i> Error al Leer Dataset</h3>
+                            <p>El archivo de datos existe pero no se puede leer correctamente.</p>
+                            <p style="margin-top: 10px;">Por favor verifique el formato del archivo CSV.</p>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                const response = await fetch('/api/stats');
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    loadingDiv.innerHTML = `
+                        <div class="result-box error">
+                            <h3><i class="fas fa-exclamation-circle"></i> Error al Cargar Estadísticas</h3>
+                            <p><strong>Error:</strong> ${data.error || 'Error desconocido'}</p>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                if (response.ok && data) {
+                    loadingDiv.style.display = 'none';
+                    contentDiv.style.display = 'block';
+                    
+                    const gridEstadisticas = document.getElementById('gridEstadisticas');
+                    gridEstadisticas.innerHTML = `
+                        <div class="stat-card">
+                            <i class="fas fa-plane"></i>
+                            <h3>${data.total_flights.toLocaleString()}</h3>
+                            <p>Total de Vuelos</p>
+                        </div>
+                        <div class="stat-card">
+                            <i class="fas fa-clock"></i>
+                            <h3>${data.delays.departure.mean.toFixed(1)}</h3>
+                            <p>Retraso Salida Promedio (min)</p>
+                        </div>
+                        <div class="stat-card">
+                            <i class="fas fa-clock"></i>
+                            <h3>${data.delays.arrival.mean.toFixed(1)}</h3>
+                            <p>Retraso Llegada Promedio (min)</p>
+                        </div>
+                        <div class="stat-card">
+                            <i class="fas fa-cloud-rain"></i>
+                            <h3>${data.delays.weather.mean.toFixed(1)}</h3>
+                            <p>Retraso Clima Promedio (min)</p>
+                        </div>
+                    `;
+                    
+                    const ctx = document.getElementById('graficoEstadisticas').getContext('2d');
+                    if (graficoEstadisticas) graficoEstadisticas.destroy();
+                    
+                    const topRutas = Object.entries(data.top_routes).slice(0, 10);
+                    graficoEstadisticas = new Chart(ctx, {
+                        type: 'bar',
+                        data: {
+                            labels: topRutas.map(([route]) => route.replace(',', ' →')),
+                            datasets: [{
+                                label: 'Número de Vuelos',
+                                data: topRutas.map(([, count]) => count),
+                                backgroundColor: 'rgba(0, 102, 204, 0.8)',
+                                borderColor: 'rgba(0, 102, 204, 1)',
+                                borderWidth: 2
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                title: {
+                                    display: true,
+                                    text: 'Top 10 Rutas',
+                                    font: { size: 18, weight: 'bold' },
+                                    color: '#003366'
+                                }
+                            },
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    ticks: {
+                                        precision: 0,
+                                        color: '#003366'
+                                    },
+                                    grid: {
+                                        color: 'rgba(0, 0, 0, 0.05)'
+                                    }
+                                },
+                                x: {
+                                    ticks: {
+                                        color: '#003366'
+                                    },
+                                    grid: {
+                                        display: false
+                                    }
+                                }
+                            }
+                        }
+                    });
+                } else {
+                    loadingDiv.innerHTML = `
+                        <div class="result-box error">
+                            <h3><i class="fas fa-exclamation-circle"></i> Error al Procesar Estadísticas</h3>
+                            <p>No se pudieron obtener las estadísticas del dataset.</p>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                loadingDiv.innerHTML = `
+                    <div class="result-box error">
+                        <h3><i class="fas fa-exclamation-circle"></i> Error de Conexión</h3>
+                        <p><strong>Error:</strong> ${error.message}</p>
+                        <p style="margin-top: 10px;">Por favor verifique que el servidor esté funcionando correctamente.</p>
+                    </div>
+                `;
+            }
+        }
+        
+        // Formulario de consulta
+        document.getElementById('formConsulta').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const filtros = {};
+            const origen = document.getElementById('consulta_origen').value;
+            const destino = document.getElementById('consulta_destino').value;
+            const minDelay = document.getElementById('min_delay').value;
+            const maxDelay = document.getElementById('max_delay').value;
+            const limit = document.getElementById('limit').value;
+            
+            if (origen) filtros.origen = origen;
+            if (destino) filtros.destino = destino;
+            if (minDelay) filtros.min_delay = parseFloat(minDelay);
+            if (maxDelay) filtros.max_delay = parseFloat(maxDelay);
+            if (limit) filtros.limit = parseInt(limit);
+            
+            const resultadosDiv = document.getElementById('resultadosConsulta');
+            resultadosDiv.innerHTML = '<div class="loading">Buscando</div>';
+            
+            try {
+                const response = await fetch('/api/query', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(filtros)
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    resultadosDiv.innerHTML = `
+                        <h3 style="margin-bottom: 20px; color: var(--azul-oscuro);"><i class="fas fa-list"></i> Se encontraron ${data.count} vuelos</h3>
+                        ${data.flights.map(vuelo => `
+                            <div class="flight-item">
+                                <p><strong><i class="fas fa-route"></i> Ruta:</strong> ${vuelo.Origen} → ${vuelo.Destino}</p>
+                                <p><strong><i class="fas fa-calendar"></i> Fecha:</strong> ${vuelo.Fecha}</p>
+                                <p><strong><i class="fas fa-exclamation-triangle"></i> Retrasos:</strong> Salida: ${vuelo.Retraso_Salida} min, Llegada: ${vuelo.Retraso_llegada} min</p>
+                                ${vuelo.Cluster !== undefined ? `<p><strong><i class="fas fa-layer-group"></i> Cluster:</strong> ${vuelo.Cluster}</p>` : ''}
+                            </div>
+                        `).join('')}
+                    `;
+                } else {
+                    resultadosDiv.innerHTML = `<div class="result-box error"><p>${data.error}</p></div>`;
+                }
+            } catch (error) {
+                resultadosDiv.innerHTML = `<div class="result-box error"><p>Error: ${error.message}</p></div>`;
+            }
+        });
+        
+        // Upload de archivo
+        document.getElementById('inputArchivo').addEventListener('change', async (e) => {
+            const archivo = e.target.files[0];
+            if (!archivo) return;
+            
+            const formData = new FormData();
+            formData.append('file', archivo);
+            
+            const resultadoDiv = document.getElementById('resultadoUpload');
+            resultadoDiv.style.display = 'block';
+            resultadoDiv.className = 'result-box';
+            resultadoDiv.innerHTML = '<div class="loading">Subiendo y procesando</div>';
+            
+            try {
+                const response = await fetch('/api/upload-data', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    resultadoDiv.className = 'result-box success';
+                    resultadoDiv.innerHTML = `
+                        <h3><i class="fas fa-check-circle"></i> Data Subida Exitosamente</h3>
+                        <p>${data.message}</p>
+                        ${data.retrain_success ? 
+                            `<p style="margin-top: 15px;"><strong>¡Modelo retrenado exitosamente!</strong></p>
+                             <pre style="background: rgba(0,0,0,0.05); padding: 15px; border-radius: 8px; margin-top: 10px; overflow-x: auto; font-size: 0.9em;">${data.retrain_output}</pre>` :
+                            `<p style="margin-top: 15px; color: var(--advertencia);">El retrenamiento tuvo problemas. Puede retrenar manualmente.</p>`
+                        }
+                    `;
+                } else {
+                    resultadoDiv.className = 'result-box error';
+                    resultadoDiv.innerHTML = `<h3><i class="fas fa-exclamation-circle"></i> Error en la Subida</h3><p>${data.error || data.output}</p>`;
+                }
+            } catch (error) {
+                resultadoDiv.className = 'result-box error';
+                resultadoDiv.innerHTML = `<h3><i class="fas fa-exclamation-circle"></i> Error</h3><p>${error.message}</p>`;
+            }
+        });
+        
+        // Drag and drop
+        const areaUpload = document.getElementById('areaUpload');
+        areaUpload.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            areaUpload.classList.add('dragover');
+        });
+        
+        areaUpload.addEventListener('dragleave', () => {
+            areaUpload.classList.remove('dragover');
+        });
+        
+        areaUpload.addEventListener('drop', (e) => {
+            e.preventDefault();
+            areaUpload.classList.remove('dragover');
+            const archivo = e.dataTransfer.files[0];
+            if (archivo && archivo.name.endsWith('.csv')) {
+                document.getElementById('inputArchivo').files = e.dataTransfer.files;
+                document.getElementById('inputArchivo').dispatchEvent(new Event('change'));
+            }
+        });
+        
+        // Retrenar modelo
+        async function retrenarModelo() {
+            const resultadoDiv = document.getElementById('resultadoRetrenamiento');
+            resultadoDiv.style.display = 'block';
+            resultadoDiv.className = 'result-box';
+            resultadoDiv.innerHTML = '<div class="loading">Retrenando modelo. Esto puede tomar unos minutos</div>';
+            
+            try {
+                const response = await fetch('/api/retrain', {
+                    method: 'POST'
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    resultadoDiv.className = 'result-box success';
+                    resultadoDiv.innerHTML = `
+                        <h3><i class="fas fa-check-circle"></i> Modelo Retrenado Exitosamente</h3>
+                        <pre style="background: rgba(0,0,0,0.05); padding: 15px; border-radius: 8px; margin-top: 10px; overflow-x: auto; font-size: 0.9em;">${data.output}</pre>
+                    `;
+                } else {
+                    resultadoDiv.className = 'result-box error';
+                    resultadoDiv.innerHTML = `
+                        <h3><i class="fas fa-exclamation-circle"></i> Error en el Retrenamiento</h3>
+                        <pre style="background: rgba(0,0,0,0.05); padding: 15px; border-radius: 8px; margin-top: 10px; overflow-x: auto; font-size: 0.9em;">${data.output || data.error}</pre>
+                    `;
+                }
+            } catch (error) {
+                resultadoDiv.className = 'result-box error';
+                resultadoDiv.innerHTML = `<h3><i class="fas fa-exclamation-circle"></i> Error</h3><p>${error.message}</p>`;
+            }
+        }
+        
+        // Verificar salud
+        async function verificarSalud() {
+            const resultadoDiv = document.getElementById('resultadoSalud');
+            resultadoDiv.style.display = 'block';
+            resultadoDiv.className = 'result-box';
+            resultadoDiv.innerHTML = '<div class="loading">Verificando</div>';
+            
+            try {
+                const response = await fetch('/health');
+                const data = await response.json();
+                
+                const todosOk = data.model_loaded && data.scaler_loaded && data.data_available && data.data_readable;
+                
+                resultadoDiv.className = todosOk ? 'result-box success' : 'result-box error';
+                resultadoDiv.innerHTML = `
+                    <h3><i class="fas fa-heartbeat"></i> Estado del Sistema</h3>
+                    <p><strong>Estado General:</strong> <span style="color: ${todosOk ? 'var(--exito)' : 'var(--error)'}; font-weight: 700;">${data.status.toUpperCase()}</span></p>
+                    <hr style="margin: 15px 0; border: none; border-top: 1px solid rgba(0,0,0,0.1);">
+                    <p><strong>Modelo Cargado:</strong> ${data.model_loaded ? '<span style="color: var(--exito);">✓ Sí</span>' : '<span style="color: var(--error);">✗ No</span>'} ${!data.model_loaded ? '<span style="color: var(--error); margin-left: 10px;">(Necesita entrenar modelo)</span>' : ''}</p>
+                    <p><strong>Scaler Cargado:</strong> ${data.scaler_loaded ? '<span style="color: var(--exito);">✓ Sí</span>' : '<span style="color: var(--error);">✗ No</span>'} ${!data.scaler_loaded ? '<span style="color: var(--error); margin-left: 10px;">(Necesita entrenar modelo)</span>' : ''}</p>
+                    <p><strong>Número de Clusters:</strong> ${data.n_clusters || '0'}</p>
+                    <p><strong>Dataset Disponible:</strong> ${data.data_available ? '<span style="color: var(--exito);">✓ Sí</span>' : '<span style="color: var(--error);">✗ No</span>'}</p>
+                    <p><strong>Dataset Legible:</strong> ${data.data_readable ? '<span style="color: var(--exito);">✓ Sí</span>' : '<span style="color: var(--error);">✗ No</span>'}</p>
+                    ${data.data_rows > 0 ? `<p><strong>Filas en Dataset:</strong> ${data.data_rows.toLocaleString()}</p>` : ''}
+                    ${!todosOk ? `
+                        <hr style="margin: 15px 0; border: none; border-top: 1px solid rgba(0,0,0,0.1);">
+                        <p style="margin-top: 15px;"><strong>Acciones Recomendadas:</strong></p>
+                        <ul style="margin-left: 20px; margin-top: 10px;">
+                            ${!data.model_loaded ? '<li>Entrenar el modelo desde la pestaña Mantenimiento</li>' : ''}
+                            ${!data.data_available ? '<li>Verificar que el archivo CSV esté en el directorio correcto</li>' : ''}
+                            ${data.data_available && !data.data_readable ? '<li>Verificar el formato del archivo CSV</li>' : ''}
+                        </ul>
+                        ${!data.model_loaded ? `
+                            <button class="btn-primary" onclick="retrenarModelo()" style="margin-top: 15px;">
+                                <i class="fas fa-sync-alt"></i> Entrenar Modelo Ahora
+                            </button>
+                        ` : ''}
+                    ` : ''}
+                `;
+            } catch (error) {
+                resultadoDiv.className = 'result-box error';
+                resultadoDiv.innerHTML = `<h3><i class="fas fa-exclamation-circle"></i> Error</h3><p>${error.message}</p>`;
+            }
+        }
+        
+        // Inicializar al cargar la página
+        window.addEventListener('DOMContentLoaded', () => {
+            cargarAeropuertos();
+            if (document.getElementById('clusters').classList.contains('active')) {
+                cargarClusters();
             }
         });
     </script>
 </body>
 </html>
-
