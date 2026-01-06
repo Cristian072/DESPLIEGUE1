@@ -1,0 +1,29 @@
+# COMANDOS PARA SUBIR A GITHUB
+# Copia y pega estos comandos uno por uno en PowerShell
+
+# 1. Ir a la carpeta del proyecto
+cd "D:\UNIVERSIDAD\CURSOS\APRENDIZAJE MAQUINA\PROYECTO FINAL"
+
+# 2. Inicializar Git (solo la primera vez)
+git init
+
+# 3. Agregar todos los archivos
+git add .
+
+# 4. Hacer commit
+git commit -m "Initial commit - Flight Clustering App"
+
+# 5. Conectar con GitHub (solo la primera vez)
+git remote add origin https://github.com/Cristian072/DESPLIEGUE1.git
+
+# 6. Cambiar a rama main
+git branch -M main
+
+# 7. Subir a GitHub
+git push -u origin main
+
+# Si te pide usuario/contraseña:
+# - Usuario: Cristian072
+# - Contraseña: Usa un Personal Access Token de GitHub
+#   (Crear en: https://github.com/settings/tokens)
+
