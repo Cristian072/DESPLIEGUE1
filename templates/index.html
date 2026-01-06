@@ -536,6 +536,51 @@
             color: #2E7D32;
         }
         
+        .modal-actions {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .btn-export-csv, .btn-ordenar {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 0.95em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .btn-ordenar {
+            background: linear-gradient(135deg, #ffc107 0%, #ff9800 100%);
+        }
+        
+        .btn-export-csv:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(40, 167, 69, 0.4);
+        }
+        
+        .btn-ordenar:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(255, 193, 7, 0.4);
+        }
+        
+        .btn-export-csv:active, .btn-ordenar:active {
+            transform: translateY(0);
+        }
+        
+        .sort-indicator {
+            margin-left: 5px;
+            font-size: 0.8em;
+        }
+        
         .query-results {
             max-height: 600px;
             overflow-y: auto;
@@ -2036,6 +2081,38 @@
         // Actualizar estado del modelo cuando se cambia a la pestaña de mantenimiento
         // (La función mostrarTab ya está definida arriba)
         
+        // Variable global para almacenar los vuelos del cluster actual
+        let vuelosActuales = [];
+        let ordenadoPorDemora = false;
+        let clusterIdActual = null;
+        
+        // Función para renderizar la tabla de vuelos
+        function renderizarTablaVuelos(vuelos) {
+            const modalTablaVuelos = document.getElementById('modalTablaVuelos');
+            modalTablaVuelos.innerHTML = '';
+            
+            vuelos.forEach(flight => {
+                const row = document.createElement('tr');
+                const retrasoClima = flight.Retraso_Clima || 0;
+                const retrasoSalida = flight.Retraso_Salida || 0;
+                const retrasoLlegada = flight.Retraso_llegada || 0;
+                const retrasoClass = retrasoClima > 0 ? 'positive' : 'zero';
+                const demoraSalidaClass = retrasoSalida > 0 ? 'positive' : (retrasoSalida < 0 ? 'zero' : '');
+                const demoraLlegadaClass = retrasoLlegada > 0 ? 'positive' : (retrasoLlegada < 0 ? 'zero' : '');
+                
+                row.innerHTML = `
+                    <td class="route-cell">${flight.Origen} → ${flight.Destino}</td>
+                    <td class="time-cell">${flight.Hora_salida}</td>
+                    <td class="time-cell">${flight.Hora_llegada}</td>
+                    <td class="delay-cell ${demoraSalidaClass}">${retrasoSalida.toFixed(1)}</td>
+                    <td class="delay-cell ${demoraLlegadaClass}">${retrasoLlegada.toFixed(1)}</td>
+                    <td class="delay-cell ${retrasoClass}">${retrasoClima.toFixed(1)}</td>
+                    <td>${flight.Fecha}</td>
+                `;
+                modalTablaVuelos.appendChild(row);
+            });
+        }
+        
         // Función para ver vuelos de un cluster
         async function verVuelosCluster(clusterId) {
             const modal = document.getElementById('modalVuelos');
@@ -2057,6 +2134,9 @@
             // Mostrar modal
             modal.classList.add('active');
             modalClusterId.textContent = clusterId;
+            clusterIdActual = clusterId;
+            ordenadoPorDemora = false;
+            document.getElementById('sortIndicator').textContent = '';
             
             // Ocultar contenido y error, mostrar carga
             modalContenido.style.display = 'none';
@@ -2069,26 +2149,12 @@
                 const data = await response.json();
                 
                 if (response.ok && data.flights) {
+                    // Guardar vuelos globalmente
+                    vuelosActuales = data.flights;
                     modalTotalVuelos.textContent = data.count;
                     
-                    // Limpiar tabla
-                    modalTablaVuelos.innerHTML = '';
-                    
-                    // Agregar vuelos a la tabla
-                    data.flights.forEach(flight => {
-                        const row = document.createElement('tr');
-                        const retrasoClima = flight.Retraso_Clima || 0;
-                        const retrasoClass = retrasoClima > 0 ? 'positive' : 'zero';
-                        
-                        row.innerHTML = `
-                            <td class="route-cell">${flight.Origen} → ${flight.Destino}</td>
-                            <td class="time-cell">${flight.Hora_salida}</td>
-                            <td class="time-cell">${flight.Hora_llegada}</td>
-                            <td class="delay-cell ${retrasoClass}">${retrasoClima.toFixed(1)}</td>
-                            <td>${flight.Fecha}</td>
-                        `;
-                        modalTablaVuelos.appendChild(row);
-                    });
+                    // Renderizar tabla
+                    renderizarTablaVuelos(vuelosActuales);
                     
                     // Mostrar contenido
                     modalCargando.style.display = 'none';
@@ -2101,6 +2167,83 @@
                 modalError.style.display = 'block';
                 document.getElementById('modalErrorMensaje').textContent = error.message;
             }
+        }
+        
+        // Función para ordenar por demora (de mayor a menor)
+        function ordenarPorDemora() {
+            if (vuelosActuales.length === 0) {
+                alert('No hay vuelos para ordenar');
+                return;
+            }
+            
+            const sortIndicator = document.getElementById('sortIndicator');
+            
+            if (!ordenadoPorDemora) {
+                // Ordenar de mayor a menor demora (usando retraso de salida como criterio principal)
+                vuelosActuales.sort((a, b) => {
+                    const demoraA = a.Retraso_Salida || 0;
+                    const demoraB = b.Retraso_Salida || 0;
+                    return demoraB - demoraA; // Mayor a menor
+                });
+                ordenadoPorDemora = true;
+                sortIndicator.textContent = '↓';
+            } else {
+                // Volver al orden original
+                ordenadoPorDemora = false;
+                sortIndicator.textContent = '';
+                // Recargar datos originales
+                verVuelosCluster(clusterIdActual);
+                return;
+            }
+            
+            // Re-renderizar tabla
+            renderizarTablaVuelos(vuelosActuales);
+        }
+        
+        // Función para exportar vuelos a CSV
+        function exportarVuelosCSV() {
+            if (vuelosActuales.length === 0) {
+                alert('No hay vuelos para exportar');
+                return;
+            }
+            
+            // Preparar datos para CSV
+            const headers = ['Cluster', 'Origen', 'Destino', 'Hora Salida', 'Hora Llegada', 
+                           'Demora Salida (min)', 'Demora Llegada (min)', 'Retraso Clima (min)', 'Fecha'];
+            
+            // Crear filas CSV
+            const csvRows = [headers.join(',')];
+            
+            vuelosActuales.forEach(flight => {
+                const row = [
+                    clusterIdActual || '',
+                    `"${flight.Origen || ''}"`,
+                    `"${flight.Destino || ''}"`,
+                    flight.Hora_salida || '',
+                    flight.Hora_llegada || '',
+                    flight.Retraso_Salida || 0,
+                    flight.Retraso_llegada || 0,
+                    flight.Retraso_Clima || 0,
+                    `"${flight.Fecha || ''}"`
+                ];
+                csvRows.push(row.join(','));
+            });
+            
+            // Crear contenido CSV
+            const csvContent = csvRows.join('\n');
+            
+            // Crear blob y descargar
+            const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            
+            link.setAttribute('href', url);
+            link.setAttribute('download', `vuelos_cluster_${clusterIdActual}_${new Date().toISOString().split('T')[0]}.csv`);
+            link.style.visibility = 'hidden';
+            
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
         }
         
         // Función para cerrar el modal
@@ -2129,9 +2272,20 @@
             <div class="modal-body">
                 <div id="modalCargando" class="loading">Cargando vuelos...</div>
                 <div id="modalContenido" style="display: none;">
-                    <p style="margin-bottom: 15px; color: var(--gris-oscuro);">
-                        <strong>Total de vuelos:</strong> <span id="modalTotalVuelos">0</span>
-                    </p>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 15px;">
+                        <p style="margin: 0; color: var(--gris-oscuro);">
+                            <strong>Total de vuelos:</strong> <span id="modalTotalVuelos">0</span>
+                        </p>
+                        <div class="modal-actions">
+                            <button class="btn-ordenar" onclick="ordenarPorDemora()">
+                                <i class="fas fa-sort-amount-down"></i> Ordenar por Demora
+                                <span id="sortIndicator" class="sort-indicator"></span>
+                            </button>
+                            <button class="btn-export-csv" onclick="exportarVuelosCSV()">
+                                <i class="fas fa-file-csv"></i> Exportar a CSV
+                            </button>
+                        </div>
+                    </div>
                     <div style="max-height: 60vh; overflow-y: auto;">
                         <table class="flights-table">
                             <thead>
@@ -2139,6 +2293,8 @@
                                     <th><i class="fas fa-route"></i> Ruta</th>
                                     <th><i class="fas fa-clock"></i> Hora Salida</th>
                                     <th><i class="fas fa-clock"></i> Hora Llegada</th>
+                                    <th><i class="fas fa-exclamation-triangle"></i> Demora Salida (min)</th>
+                                    <th><i class="fas fa-exclamation-triangle"></i> Demora Llegada (min)</th>
                                     <th><i class="fas fa-cloud-rain"></i> Retraso Clima (min)</th>
                                     <th><i class="fas fa-calendar"></i> Fecha</th>
                                 </tr>
