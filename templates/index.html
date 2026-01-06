@@ -370,6 +370,172 @@
         .badge-clima { background: #E3F2FD; color: #1565C0; }
         .badge-alto-retraso { background: #FFEBEE; color: #C62828; }
         
+        .btn-ver-vuelos {
+            background: linear-gradient(135deg, var(--azul-primario) 0%, #0052a3 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 0.95em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-top: 15px;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        
+        .btn-ver-vuelos:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 102, 204, 0.4);
+        }
+        
+        .btn-ver-vuelos:active {
+            transform: translateY(0);
+        }
+        
+        /* Modal Styles */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            z-index: 1000;
+            backdrop-filter: blur(4px);
+        }
+        
+        .modal-overlay.active {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .modal-content {
+            background: white;
+            border-radius: 16px;
+            padding: 0;
+            max-width: 90%;
+            width: 1200px;
+            max-height: 90vh;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            animation: modalSlideIn 0.3s ease-out;
+        }
+        
+        @keyframes modalSlideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-50px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .modal-header {
+            background: linear-gradient(135deg, var(--azul-primario) 0%, #0052a3 100%);
+            color: white;
+            padding: 20px 30px;
+            border-radius: 16px 16px 0 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .modal-header h2 {
+            margin: 0;
+            font-size: 1.8em;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .modal-close {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            font-size: 1.5em;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .modal-close:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: rotate(90deg);
+        }
+        
+        .modal-body {
+            padding: 30px;
+            overflow-y: auto;
+            flex: 1;
+        }
+        
+        .flights-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        
+        .flights-table thead {
+            background: var(--gris-claro);
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        
+        .flights-table th {
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+            color: var(--azul-oscuro);
+            border-bottom: 2px solid var(--azul-primario);
+        }
+        
+        .flights-table td {
+            padding: 12px 15px;
+            border-bottom: 1px solid var(--gris-medio);
+        }
+        
+        .flights-table tbody tr:hover {
+            background: var(--gris-claro);
+        }
+        
+        .route-cell {
+            font-weight: 600;
+            color: var(--azul-primario);
+        }
+        
+        .time-cell {
+            font-family: 'Courier New', monospace;
+            font-weight: 600;
+        }
+        
+        .delay-cell {
+            font-weight: 600;
+        }
+        
+        .delay-cell.positive {
+            color: #E65100;
+        }
+        
+        .delay-cell.zero {
+            color: #2E7D32;
+        }
+        
         .query-results {
             max-height: 600px;
             overflow-y: auto;
@@ -1263,6 +1429,10 @@
                                         </ul>
                                     ` : ''}
                                 </div>
+                                
+                                <button class="btn-ver-vuelos" onclick="verVuelosCluster(${c.cluster})">
+                                    <i class="fas fa-list"></i> Ver Vuelos del Cluster
+                                </button>
                             </div>
                         `;
                     }).join('');
@@ -1865,6 +2035,78 @@
         
         // Actualizar estado del modelo cuando se cambia a la pestaña de mantenimiento
         // (La función mostrarTab ya está definida arriba)
+        
+        // Función para ver vuelos de un cluster
+        async function verVuelosCluster(clusterId) {
+            const modal = document.getElementById('modalVuelos');
+            const modalClusterId = document.getElementById('modalClusterId');
+            const modalCargando = document.getElementById('modalCargando');
+            const modalContenido = document.getElementById('modalContenido');
+            const modalError = document.getElementById('modalError');
+            const modalTablaVuelos = document.getElementById('modalTablaVuelos');
+            const modalTotalVuelos = document.getElementById('modalTotalVuelos');
+            
+            // Mostrar modal
+            modal.classList.add('active');
+            modalClusterId.textContent = clusterId;
+            
+            // Ocultar contenido y error, mostrar carga
+            modalContenido.style.display = 'none';
+            modalError.style.display = 'none';
+            modalCargando.style.display = 'block';
+            modalTablaVuelos.innerHTML = '';
+            
+            try {
+                const response = await fetch(`/api/cluster-flights/${clusterId}`);
+                const data = await response.json();
+                
+                if (response.ok && data.flights) {
+                    modalTotalVuelos.textContent = data.count;
+                    
+                    // Limpiar tabla
+                    modalTablaVuelos.innerHTML = '';
+                    
+                    // Agregar vuelos a la tabla
+                    data.flights.forEach(flight => {
+                        const row = document.createElement('tr');
+                        const retrasoClima = flight.Retraso_Clima || 0;
+                        const retrasoClass = retrasoClima > 0 ? 'positive' : 'zero';
+                        
+                        row.innerHTML = `
+                            <td class="route-cell">${flight.Origen} → ${flight.Destino}</td>
+                            <td class="time-cell">${flight.Hora_salida}</td>
+                            <td class="time-cell">${flight.Hora_llegada}</td>
+                            <td class="delay-cell ${retrasoClass}">${retrasoClima.toFixed(1)}</td>
+                            <td>${flight.Fecha}</td>
+                        `;
+                        modalTablaVuelos.appendChild(row);
+                    });
+                    
+                    // Mostrar contenido
+                    modalCargando.style.display = 'none';
+                    modalContenido.style.display = 'block';
+                } else {
+                    throw new Error(data.error || 'Error al cargar los vuelos');
+                }
+            } catch (error) {
+                modalCargando.style.display = 'none';
+                modalError.style.display = 'block';
+                document.getElementById('modalErrorMensaje').textContent = error.message;
+            }
+        }
+        
+        // Función para cerrar el modal
+        function cerrarModalVuelos() {
+            const modal = document.getElementById('modalVuelos');
+            modal.classList.remove('active');
+        }
+        
+        // Cerrar modal con tecla ESC
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape') {
+                cerrarModalVuelos();
+            }
+        });
     </script>
 </body>
 </html>

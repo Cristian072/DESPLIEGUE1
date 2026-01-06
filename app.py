@@ -659,6 +659,130 @@ def query_flights():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+@app.route('/api/cluster-flights/<int:cluster_id>', methods=['GET'])
+def get_cluster_flights(cluster_id):
+    """Obtener vuelos de un cluster específico"""
+    try:
+        if not os.path.exists(DATA_PATH):
+            return jsonify({'error': 'Dataset not found'}), 404
+        
+        # Cargar modelo y datos
+        model, scaler, _, origin_encoder, dest_encoder = load_model()
+        if model is None or scaler is None:
+            return jsonify({'error': 'Model not trained yet'}), 400
+        
+        # Cargar dataset
+        df = pd.read_csv(DATA_PATH, nrows=50000)  # Limitar para performance
+        
+        # Preprocesar datos para predicción
+        df_processed = df.copy()
+        df_processed['Fecha'] = pd.to_datetime(df_processed['Fecha'], format='%d/%m/%Y', errors='coerce')
+        df_processed['Dia_semana'] = df_processed['Fecha'].dt.dayofweek
+        df_processed['Mes'] = df_processed['Fecha'].dt.month
+        df_processed['Hora_salida_num'] = df_processed['Hora_salida'].apply(
+            lambda x: int(str(x).zfill(4)[:2]) if pd.notna(x) else 0
+        )
+        
+        # Calcular duración del vuelo
+        df_processed['Duracion_vuelo'] = (
+            df_processed['Hora_llegada'].apply(
+                lambda x: int(str(int(x)).zfill(4)[:2])*60 + int(str(int(x)).zfill(4)[2:]) if pd.notna(x) else 0
+            ) -
+            df_processed['Hora_salida'].apply(
+                lambda x: int(str(int(x)).zfill(4)[:2])*60 + int(str(int(x)).zfill(4)[2:]) if pd.notna(x) else 0
+            )
+        )
+        df_processed['Duracion_vuelo'] = df_processed['Duracion_vuelo'].apply(lambda x: x + 1440 if x < 0 else x)
+        
+        # Codificar origen y destino
+        try:
+            if origin_encoder is not None:
+                df_processed['Origen_encoded'] = origin_encoder.transform(df_processed['Origen'].astype(str))
+            else:
+                df_processed['Origen_encoded'] = 0
+        except:
+            df_processed['Origen_encoded'] = 0
+        
+        try:
+            if dest_encoder is not None:
+                df_processed['Destino_encoded'] = dest_encoder.transform(df_processed['Destino'].astype(str))
+            else:
+                df_processed['Destino_encoded'] = 0
+        except:
+            df_processed['Destino_encoded'] = 0
+        
+        # Preparar características
+        feature_cols = ['Retraso_Salida', 'Retraso_llegada', 'Retraso_Clima', 
+                       'Duracion_vuelo', 'Hora_salida_num', 'Dia_semana',
+                       'Origen_encoded', 'Destino_encoded']
+        
+        # Filtrar filas con datos válidos
+        X = df_processed[feature_cols].dropna()
+        valid_indices = X.index
+        
+        if len(X) == 0:
+            return jsonify({'error': 'No valid data found'}), 400
+        
+        # Predecir clusters
+        X_scaled = scaler.transform(X)
+        labels = model.predict(X_scaled)
+        
+        # Filtrar vuelos del cluster solicitado
+        cluster_mask = labels == cluster_id
+        cluster_indices = valid_indices[cluster_mask]
+        
+        if len(cluster_indices) == 0:
+            return jsonify({
+                'count': 0,
+                'flights': [],
+                'message': f'No flights found in cluster {cluster_id}'
+            })
+        
+        # Obtener vuelos del cluster
+        cluster_flights = df.loc[cluster_indices].copy()
+        
+        # Limitar a 500 vuelos para performance
+        limit = request.args.get('limit', 500, type=int)
+        cluster_flights = cluster_flights.head(limit)
+        
+        # Formatear datos para respuesta
+        flights_data = []
+        for _, row in cluster_flights.iterrows():
+            # Formatear hora de salida
+            hora_salida = str(int(row['Hora_salida'])) if pd.notna(row['Hora_salida']) else 'N/A'
+            if hora_salida != 'N/A' and len(hora_salida) == 3:
+                hora_salida = '0' + hora_salida
+            hora_salida_formatted = f"{hora_salida[:2]}:{hora_salida[2:]}" if len(hora_salida) == 4 else hora_salida
+            
+            # Formatear hora de llegada
+            hora_llegada = str(int(row['Hora_llegada'])) if pd.notna(row['Hora_llegada']) else 'N/A'
+            if hora_llegada != 'N/A' and len(hora_llegada) == 3:
+                hora_llegada = '0' + hora_llegada
+            hora_llegada_formatted = f"{hora_llegada[:2]}:{hora_llegada[2:]}" if len(hora_llegada) == 4 else hora_llegada
+            
+            flights_data.append({
+                'Origen': str(row['Origen']) if pd.notna(row['Origen']) else 'N/A',
+                'Destino': str(row['Destino']) if pd.notna(row['Destino']) else 'N/A',
+                'Retraso_Clima': float(row['Retraso_Clima']) if pd.notna(row['Retraso_Clima']) else 0.0,
+                'Hora_salida': hora_salida_formatted,
+                'Hora_llegada': hora_llegada_formatted,
+                'Fecha': str(row['Fecha']) if pd.notna(row['Fecha']) else 'N/A',
+                'Retraso_Salida': float(row['Retraso_Salida']) if pd.notna(row['Retraso_Salida']) else 0.0,
+                'Retraso_llegada': float(row['Retraso_llegada']) if pd.notna(row['Retraso_llegada']) else 0.0
+            })
+        
+        return jsonify({
+            'count': len(flights_data),
+            'cluster_id': cluster_id,
+            'flights': flights_data
+        })
+    
+    except Exception as e:
+        import traceback
+        print(f"Error in get_cluster_flights: {str(e)}")
+        print(traceback.format_exc())
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/api/train', methods=['POST'])
 def train_model():
     """Entrenar modelo inicial o retrenar modelo existente"""
